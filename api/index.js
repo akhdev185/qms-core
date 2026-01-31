@@ -15,10 +15,13 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'];
 
-// Dynamic Redirect URI based on environment (Vercel vs Local)
-// On Vercel, it should be set in environment variables, or inferred from request headers (harder in Express behind proxy)
-// We'll rely on the user setting REDIRECT_URI in Vercel Env Vars, or default to localhost for dev
+// Default Redirect URI
 const REDIRECT_URI = process.env.REDIRECT_URI || `http://localhost:3001/api/auth/callback`;
+
+// Health Check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), env: process.env.NODE_ENV });
+});
 
 app.get('/api/auth/dashboard', (req, res) => {
     const currentToken = process.env.GOOGLE_REFRESH_TOKEN;
@@ -53,16 +56,12 @@ app.get('/api/auth', (req, res) => {
         return res.status(500).send('Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in Environment Variables.');
     }
     const encodedScopes = encodeURIComponent(SCOPES.join(' '));
-    // Note: We use the production redirect URI here
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${encodedScopes}&access_type=offline&prompt=consent`;
     res.redirect(authUrl);
 });
 
-// Changed from /oauth2callback to /api/auth/callback to match Vercel convention better, 
-// but we need to keep consistency. Let's stick to what the user might have configured in Google Cloud Console
-// or allow them to change it. Ideally, /api/auth/callback is cleaner for serverless.
-// I will support both paths to be safe, or just use the one defined in REDIRECT_URI.
-app.get(['/oauth2callback', '/api/auth/callback'], async (req, res) => {
+// Handle both standard callback paths
+app.get(['/oauth2callback', '/api/auth/callback', '/api/auth/google/callback'], async (req, res) => {
     const { code } = req.query;
     if (!code) return res.status(400).send('No code provided');
 
@@ -77,8 +76,6 @@ app.get(['/oauth2callback', '/api/auth/callback'], async (req, res) => {
 
         const newRefreshToken = response.data.refresh_token;
         
-        // SERVERLESS ADAPTATION: We cannot write to .env
-        // We must display the token to the user
         if (newRefreshToken) {
             res.send(`
                 <div style="font-family: sans-serif; padding: 20px; max-width: 800px; line-height: 1.6; direction: rtl; text-align: right;">
@@ -135,5 +132,4 @@ app.get('/api/token', async (req, res) => {
     }
 });
 
-// For Vercel, we export the app
 export default app;
