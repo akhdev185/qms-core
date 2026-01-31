@@ -9,8 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node server/oauth-server.js",
-    "oauth": "node server/oauth-server.js"
+    "start": "node server/local.js",
+    "oauth": "node server/local.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
