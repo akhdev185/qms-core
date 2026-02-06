@@ -111,14 +111,14 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-40">
+    <header className="h-16 bg-card/80 backdrop-blur-sm border-b border-border shadow-sm flex items-center justify-between px-6 sticky top-0 z-40">
       {/* Search */}
       <div className="flex items-center gap-4 flex-1 max-w-xl relative" ref={dropdownRef}>
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search all files and folders in Drive..."
-            className="pl-10 bg-background border-border"
+            className="pl-10 bg-background border-border rounded-lg focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:border-accent/40"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => searchTerm.length >= 2 && setShowDropdown(true)}
@@ -130,7 +130,7 @@ export function Header() {
 
         {/* Results Dropdown */}
         {showDropdown && (
-          <div className="absolute top-full left-0 w-full mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+          <div className="absolute top-full left-0 w-full mt-2 glass-card rounded-lg shadow-xl overflow-hidden animate-fade-in z-50">
             <div className="max-h-[400px] overflow-y-auto">
               {results.length > 0 ? (
                 <>
@@ -141,10 +141,10 @@ export function Header() {
                     <div
                       key={file.id}
                       onClick={() => window.open(file.webViewLink, '_blank')}
-                      className="px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer border-b border-border last:border-0"
+                      className="px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer border-b border-border last:border-0"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center border border-border">
+                        <div className="w-8 h-8 rounded-lg bg-background/60 flex items-center justify-center border border-border">
                           {getFileIcon(file.mimeType)}
                         </div>
                         <div className="flex-1 min-w-0">

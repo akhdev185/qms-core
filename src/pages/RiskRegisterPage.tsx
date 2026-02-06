@@ -80,7 +80,7 @@ export default function RiskRegisterPage() {
     <div className="flex min-h-screen bg-background">
       <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
 
-      <div className="flex-1 ml-64">
+      <div className="flex-1 md:ml-64 ml-0">
         <Header />
 
         <main className="p-6 space-y-6">

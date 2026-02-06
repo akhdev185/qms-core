@@ -12,6 +12,8 @@ import { CheckCircle, XCircle, Shield, Server, User, Loader2, RefreshCw, LogOut,
 import { checkDriveWritePermission } from "@/lib/driveService";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SettingsModalProps {
     open: boolean;
@@ -21,10 +23,14 @@ interface SettingsModalProps {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     const { toast } = useToast();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const { user, logout, changePassword } = useAuth();
     const [driveStatus, setDriveStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
     const [driveMessage, setDriveMessage] = useState("");
     const [serverStatus, setServerStatus] = useState<'idle' | 'checking' | 'online' | 'offline'>('idle');
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [oldPass, setOldPass] = useState("");
+    const [newPass, setNewPass] = useState("");
 
     useEffect(() => {
         // Check local storage or system preference
@@ -87,10 +93,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     };
 
     const handleLogout = () => {
-        // Clear local tokens if any
-        localStorage.removeItem('qms_token'); // Example
-        // Redirect to logout
-        window.location.href = '/api/auth/logout';
+        logout();
+        navigate("/login");
+    };
+    const handleRefreshSession = async () => {
+        await queryClient.invalidateQueries();
+        toast({ title: "Session Refreshed", description: "Data cache invalidated." });
+    };
+    const handleChangePassword = () => {
+        if (!user) return;
+        const ok = changePassword(user.id, oldPass, newPass);
+        if (!ok) {
+            toast({ title: "Password not changed", description: "Old password incorrect", variant: "destructive" });
+            return;
+        }
+        setOldPass("");
+        setNewPass("");
+        toast({ title: "Password updated", description: "Your password has been changed" });
     };
 
     return (
@@ -202,7 +221,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                 <CardTitle className="flex items-center gap-2"><User className="w-5 h-5" /> Account Information</CardTitle>
                                 <CardDescription>Manage your connected Google Account.</CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-6">
                                 <div className="space-y-1">
                                     <Label>Session Status</Label>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -210,9 +229,37 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                         Active
                                     </div>
                                 </div>
+                                {user && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label>Name</Label>
+                                            <p className="text-sm font-medium">{user.name}</p>
+                                        </div>
+                                        <div>
+                                            <Label>Email</Label>
+                                            <p className="text-sm font-medium">{user.email}</p>
+                                        </div>
+                                        <div>
+                                            <Label>Role</Label>
+                                            <p className="text-sm font-medium capitalize">{user.role}</p>
+                                        </div>
+                                        <div>
+                                            <Label>Permissions</Label>
+                                            <p className="text-sm text-muted-foreground">Role-based permissions</p>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="space-y-2">
+                                    <Label>Change Password</Label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <Input placeholder="Old password" type="password" value={oldPass} onChange={(e) => setOldPass(e.target.value)} />
+                                        <Input placeholder="New password" type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} />
+                                    </div>
+                                    <Button className="mt-2" variant="outline" onClick={handleChangePassword}>Update Password</Button>
+                                </div>
                             </CardContent>
                             <CardFooter className="flex justify-between">
-                                <Button variant="outline" onClick={() => navigate('/api/auth/dashboard')}>
+                                <Button variant="outline" onClick={handleRefreshSession}>
                                     <RefreshCw className="w-4 h-4 mr-2" />
                                     Refresh Session
                                 </Button>

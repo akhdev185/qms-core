@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface NavItem {
   id: string;
@@ -90,6 +91,14 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { user } = useAuth();
+  const items: NavItem[] =
+    user?.role === "admin"
+      ? [
+          ...navItems,
+          { id: "admin", label: "Admin Accounts", icon: Shield, path: "/admin/accounts" },
+        ]
+      : navItems;
 
   // Auto-expand based on current route
   useEffect(() => {
@@ -112,7 +121,9 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
 
     if (item.path) {
       navigate(item.path);
-      onModuleChange(item.id);
+      if (item.path.startsWith("/module/")) {
+        onModuleChange(item.id);
+      }
     }
   };
 
@@ -133,7 +144,7 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
   };
 
   return (
-    <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col h-screen fixed left-0 top-0 z-50">
+    <aside className="hidden md:flex md:w-64 bg-sidebar text-sidebar-foreground flex-col h-screen md:fixed md:left-0 md:top-0 z-50">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div
@@ -155,7 +166,7 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const isActive = getActiveState(item);
           const isExpanded = expandedItems.includes(item.id);
 
@@ -211,11 +222,11 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
-              <span className="text-sm font-medium">QA</span>
+              <span className="text-sm font-medium">{(user?.name || "User").slice(0,2).toUpperCase()}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Quality Admin</p>
-              <p className="text-xs text-sidebar-foreground/60">Administrator</p>
+              <p className="text-sm font-medium truncate">{user?.name || "Guest"}</p>
+              <p className="text-xs text-sidebar-foreground/60">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "User"}</p>
             </div>
           </div>
           <div className="px-3 py-2 rounded-lg bg-sidebar-primary/10 border border-sidebar-primary/20">

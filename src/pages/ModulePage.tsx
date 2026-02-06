@@ -189,7 +189,7 @@ export default function ModulePage() {
     <div className="min-h-screen bg-background">
       <Sidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
 
-      <main className="ml-64">
+      <main className="md:ml-64 ml-0">
         <Header />
 
         <div className="p-6 space-y-6">
@@ -352,7 +352,7 @@ export default function ModulePage() {
                       </div>
                       <div>
                         <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Status</p>
-                        {record.daysUntilNextFill !== undefined && record.daysUntilNextFill <= 0 ? (
+                        {record.isOverdue ? (
                           <span className="text-xs font-bold text-destructive flex items-center gap-1 animate-pulse">
                             <AlertCircle className="w-3 h-3" />
                             Overdue

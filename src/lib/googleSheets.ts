@@ -122,7 +122,7 @@ const MODULE_MAPPINGS: Record<string, { id: string; name: string; order: number 
   "07-": { id: "management", name: "Management & Documentation", order: 7 },
 };
 
-function normalizeCategory(category: string): { id: string; name: string } | null {
+export function normalizeCategory(category: string): { id: string; name: string } | null {
   if (!category) return null;
 
   const lower = category.toLowerCase().trim();
@@ -548,19 +548,21 @@ export function getModuleForCategory(category: string): string {
  * Calculate days remaining based on frequency and last sync
  */
 function calculateFillStats(frequencyStr: string, lastDateStr: string) {
-  if (!frequencyStr || !lastDateStr) return { daysUntilNextFill: 0, isOverdue: false, fillFrequency: frequencyStr };
+  if (!frequencyStr) return { daysUntilNextFill: undefined, isOverdue: false, fillFrequency: frequencyStr || "" };
 
-  const lastDate = parseDate(lastDateStr);
-  if (!lastDate) return { daysUntilNextFill: 0, isOverdue: false, fillFrequency: frequencyStr };
-
-  const now = new Date();
   const freqLower = frequencyStr.toLowerCase();
-
-  let intervalDays = 0;
   if (freqLower.includes("needed") || freqLower.includes("event") || freqLower === "manual") {
     return { daysUntilNextFill: undefined, isOverdue: false, fillFrequency: frequencyStr };
   }
 
+  if (!lastDateStr) return { daysUntilNextFill: undefined, isOverdue: false, fillFrequency: frequencyStr };
+
+  const lastDate = parseDate(lastDateStr);
+  if (!lastDate) return { daysUntilNextFill: undefined, isOverdue: false, fillFrequency: frequencyStr };
+
+  const now = new Date();
+
+  let intervalDays = 0;
   if (freqLower.includes("daily") || freqLower === "day") intervalDays = 1;
   else if (freqLower.includes("weekly") || freqLower.includes("week")) intervalDays = 7;
   else if (freqLower.includes("bi-weekly")) intervalDays = 14;
@@ -569,7 +571,7 @@ function calculateFillStats(frequencyStr: string, lastDateStr: string) {
   else if (freqLower.includes("semi-annually") || freqLower.includes("6 months")) intervalDays = 182;
   else if (freqLower.includes("annually") || freqLower.includes("yearly") || freqLower.includes("year")) intervalDays = 365;
 
-  if (intervalDays === 0) return { daysUntilNextFill: 0, isOverdue: false, fillFrequency: frequencyStr };
+  if (intervalDays === 0) return { daysUntilNextFill: undefined, isOverdue: false, fillFrequency: frequencyStr };
 
   const nextDueDate = new Date(lastDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
 

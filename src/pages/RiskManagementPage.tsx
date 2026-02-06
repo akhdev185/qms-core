@@ -30,7 +30,7 @@ export default function RiskManagementPage() {
     return (
         <div className="flex bg-background min-h-screen">
             <Sidebar activeModule="risk" onModuleChange={() => { }} />
-            <main className="flex-1 flex flex-col transition-all duration-300 ml-64">
+            <main className="flex-1 flex flex-col transition-all duration-300 md:ml-64 ml-0">
                 <Header />
                 <div className="p-8 space-y-6">
                     <div className="flex flex-col gap-2">

@@ -118,7 +118,7 @@ export default function AuditPage() {
     <div className="min-h-screen bg-background">
       <Sidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
 
-      <main className="ml-64">
+      <main className="md:ml-64 ml-0">
         <Header />
 
         <div className="p-6 space-y-6">

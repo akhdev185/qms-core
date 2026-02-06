@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface RecordsTableProps {
   records: QMSRecord[];
@@ -60,6 +61,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
   const updateRecord = useUpdateRecord();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [updatingRows, setUpdatingRows] = useState<Record<string, boolean>>({});
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [rowFiles, setRowFiles] = useState<Record<string, any[]>>({});
@@ -142,6 +144,18 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
         field: "reviewed",
         value: checked ? "TRUE" : "FALSE",
       });
+      await updateRecord.mutateAsync({
+        rowIndex: record.rowIndex,
+        field: "reviewedBy",
+        value: checked ? (user?.name || "User") : "",
+      });
+      const today = new Date();
+      const isoDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      await updateRecord.mutateAsync({
+        rowIndex: record.rowIndex,
+        field: "reviewDate",
+        value: checked ? isoDate : "",
+      });
     } finally {
       setUpdatingRows(prev => ({ ...prev, [key]: false }));
     }
@@ -217,7 +231,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto bg-card rounded-lg border border-border shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
@@ -244,7 +258,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
             return (
               <Fragment key={record.isAtomic ? `file-${record.fileId}` : `${record.code}-${record.rowIndex}`}>
                 <TableRow
-                  className={cn("cursor-pointer hover:bg-muted/50", isExpanded && "bg-muted/30")}
+                  className={cn("cursor-pointer hover:bg-muted/40 transition-colors", isExpanded && "bg-muted/30")}
                   onClick={() => !record.isAtomic && toggleExpand(record)}
                 >
                   <TableCell>
@@ -295,7 +309,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                         }}
                         disabled={isUpdatingAudit}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs rounded-md focus:ring-2 focus:ring-accent/40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -339,7 +353,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                       <div className="relative">
                         <MessageSquare className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                         <Input
-                          className="h-8 text-xs pl-7 bg-transparent border-none focus-visible:ring-1 focus-visible:ring-accent/50 hover:bg-muted/50 transition-colors"
+                          className="h-8 text-xs pl-7 bg-transparent border-none rounded-md focus-visible:ring-2 focus-visible:ring-accent/40 hover:bg-muted/40 transition-colors"
                           placeholder="Comment..."
                           defaultValue={record.fileComment}
                           onBlur={(e) => {
@@ -392,7 +406,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                               const isSaving = updatingRows[`file-${file.id}`];
 
                               return (
-                                <div key={file.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-3 bg-background rounded-lg border border-border gap-3">
+                                <div key={file.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-3 bg-background/60 rounded-lg border border-border gap-3">
                                   <div className="flex items-center gap-2 overflow-hidden min-w-[200px]">
                                     <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
                                     <span className="text-sm truncate font-medium">{file.name}</span>
@@ -407,7 +421,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                                       onValueChange={(val) => handleFileReview(record, file.id, val as RecordStatus)}
                                       disabled={isSaving}
                                     >
-                                      <SelectTrigger className="h-8 w-32 text-xs">
+                                      <SelectTrigger className="h-8 w-32 text-xs rounded-md focus:ring-2 focus:ring-accent/40">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -420,7 +434,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                                     <div className="relative flex-1">
                                       <MessageSquare className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                                       <Input
-                                        className="h-8 text-xs pl-7"
+                                        className="h-8 text-xs pl-7 rounded-md focus-visible:ring-2 focus-visible:ring-accent/40"
                                         placeholder="Add comment..."
                                         defaultValue={review.comment}
                                         onChange={(e) => setFileComments(prev => ({ ...prev, [file.id]: e.target.value }))}
@@ -435,7 +449,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                                     <Button
                                       size="sm"
                                       variant="default"
-                                      className="h-8 px-2"
+                                      className="h-8 px-2 rounded-md"
                                       disabled={isSaving}
                                       onClick={() => handleFileReview(record, file.id, review.status)}
                                     >
@@ -449,7 +463,7 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                         )}
 
                         <div className="flex justify-end pt-2 border-t border-border mt-4">
-                          <Button size="sm" variant="outline" onClick={() => window.open(record.folderLink, '_blank')}>
+                          <Button size="sm" variant="outline" className="rounded-md" onClick={() => window.open(record.folderLink, '_blank')}>
                             Open Full Folder in Drive
                           </Button>
                         </div>

@@ -123,7 +123,7 @@ export default function RecordDetail() {
     return (
       <div className="min-h-screen bg-background">
         <Sidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
-        <main className="ml-64">
+        <main className="md:ml-64 ml-0">
           <Header />
           <div className="p-6 flex items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -137,7 +137,7 @@ export default function RecordDetail() {
     return (
       <div className="min-h-screen bg-background">
         <Sidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
-        <main className="ml-64">
+        <main className="md:ml-64 ml-0">
           <Header />
           <div className="p-6">
             <Alert variant="destructive">
@@ -161,7 +161,7 @@ export default function RecordDetail() {
     <div className="min-h-screen bg-background">
       <Sidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
       
-      <main className="ml-64">
+      <main className="md:ml-64 ml-0">
         <Header />
         
         <div className="p-6 space-y-6">

@@ -87,7 +87,7 @@ export function AuditReadiness({
   const displayCompliance = validModules.length > 0 ? complianceRate : 0;
 
   return (
-    <div className="bg-card rounded-lg border border-border">
+    <div className="glass-card rounded-lg">
       <div className="p-5 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
@@ -147,10 +147,7 @@ export function AuditReadiness({
                     )}
                   </div>
                 </div>
-                <Progress
-                  value={progress}
-                  className="h-2"
-                />
+                <Progress value={progress} className="h-2" />
                 {(module.issuesCount > 0 || module.pendingCount > 0) && (
                   <div className="flex items-center gap-3 text-xs">
                     {module.pendingCount > 0 && (

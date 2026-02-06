@@ -106,7 +106,7 @@ export default function ArchivePage() {
     return (
         <div className="flex min-h-screen bg-background text-foreground">
             <Sidebar activeModule="archive" onModuleChange={() => { }} />
-            <main className="flex-1 ml-64">
+            <main className="flex-1 md:ml-64 ml-0">
                 <Header />
                 <div className="p-8">
                     <div className="max-w-6xl mx-auto space-y-8">

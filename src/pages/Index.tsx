@@ -127,7 +127,7 @@ export default function Index() {
     <div className="flex min-h-screen w-full bg-background">
       <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
 
-      <div className="flex-1 flex flex-col ml-64">
+      <div className="flex-1 flex flex-col md:ml-64 ml-0">
         <Header />
 
         <main className="flex-1 p-6 overflow-auto">
@@ -145,7 +145,7 @@ export default function Index() {
               </p>
             </div>
 
-            <PendingActions records={records ?? []} isLoading={isLoading} />
+           
 
           {/* Status Cards - Live Data */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
@@ -245,6 +245,7 @@ export default function Index() {
                   isLoading={isLoading}
                   onRefresh={handleRefresh}
                 />
+                <PendingActions records={records ?? []} isLoading={isLoading} />
               </div>
             </div>
       </div>
