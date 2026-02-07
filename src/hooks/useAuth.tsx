@@ -394,10 +394,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastLoginAt: r.last_login_at || 0,
           needsApprovalNotification: false,
         })) as AppUser[];
-        setUsers(mapped);
+        const local = loadUsersLocal();
+        const byEmail = new Map<string, AppUser>();
+        for (const u of mapped) byEmail.set(u.email.toLowerCase(), u);
+        for (const u of local) {
+          const key = u.email.toLowerCase();
+          const remote = byEmail.get(key);
+          if (remote) {
+            byEmail.set(key, {
+              ...remote,
+              role: u.role ?? remote.role,
+              active: typeof u.active === "boolean" ? u.active : remote.active,
+              password: u.password ?? remote.password,
+              lastLoginAt: u.lastLoginAt ?? remote.lastLoginAt,
+            });
+          } else {
+            byEmail.set(key, u);
+          }
+        }
+        const mergedArr = Array.from(byEmail.values());
+        saveUsersLocal(mergedArr);
+        setUsers(mergedArr);
         const currentId = loadSession();
         if (currentId) {
-          const u = mapped.find(x => x.id === currentId) || null;
+          const u = mergedArr.find(x => x.id === currentId) || null;
           setUser(u);
         }
       } else {
