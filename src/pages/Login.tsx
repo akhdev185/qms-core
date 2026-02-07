@@ -17,24 +17,18 @@ export default function Login() {
 
   const handleLogin = async () => {
     setIsLoading(true);
-    const target = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (target && !target.active) {
-      setIsLoading(false);
-      toast({ title: "Awaiting admin approval", description: "Your account is not active yet", variant: "destructive" });
-      return;
-    }
-    const ok = login(email, password);
+    const res = login(email, password);
     setIsLoading(false);
-    if (!ok) {
-      toast({ title: "Login failed", description: "Check email or password", variant: "destructive" });
+    if (!res.ok) {
+      toast({ title: "فشل تسجيل الدخول", description: res.message, variant: "destructive" });
       return;
     }
     try {
       if (localStorage.getItem(`approval_just_granted:${email}`) === "true") {
-        toast({ title: "Admin approved your account", description: "You can now sign in normally" });
+        toast({ title: "تمت موافقة الأدمن على حسابك", description: "يمكنك الآن تسجيل الدخول بشكل طبيعي" });
         localStorage.removeItem(`approval_just_granted:${email}`);
       }
-    } catch {}
+    } catch { void 0; }
     navigate("/");
   };
 

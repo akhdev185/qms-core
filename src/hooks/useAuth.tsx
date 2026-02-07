@@ -18,7 +18,7 @@ export type AppUser = {
 type AuthContextValue = {
   user: AppUser | null;
   users: AppUser[];
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => { ok: boolean; code: string; message: string; user?: AppUser };
   logout: () => void;
   addUser: (user: Omit<AppUser, "id">) => void;
   updateUser: (id: string, updates: Partial<AppUser>) => void;
@@ -239,8 +239,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = React.useCallback((email: string, password: string) => {
-    const u = users.find(x => x.email.toLowerCase() === email.toLowerCase() && x.active && x.password === password);
-    if (!u) return false;
+    if (!email.trim()) {
+      return { ok: false, code: "email_empty", message: "البريد الإلكتروني فارغ" };
+    }
+    if (!password.trim()) {
+      return { ok: false, code: "password_empty", message: "كلمة المرور فارغة" };
+    }
+    const found = users.find(x => x.email.toLowerCase() === email.toLowerCase());
+    if (!found) {
+      const backendNote = supabase ? "" : " (يتم استخدام التخزين المحلي)";
+      return { ok: false, code: "not_found", message: `الحساب غير موجود${backendNote}` };
+    }
+    if (!found.active) {
+      return { ok: false, code: "inactive", message: "الحساب غير مُفعّل. انتظر موافقة الأدمن" };
+    }
+    if (found.password !== password) {
+      return { ok: false, code: "wrong_password", message: "كلمة المرور غير صحيحة" };
+    }
+    const u = found;
     const updated = users.map(x => {
       if (x.id === u.id) {
         const approvalJustGranted = !!x.needsApprovalNotification;
@@ -262,7 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(u);
     saveSession(u.id);
-    return true;
+    return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u };
   }, [users]);
 
   const logout = React.useCallback(() => {
