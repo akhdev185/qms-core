@@ -364,6 +364,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
       saveUsersLocal(updated);
     }
+    const current = new Set(loadActivatedEmails());
+    if (newUser.active) {
+      current.add(newUser.email.toLowerCase());
+      saveActivatedEmails(Array.from(current));
+    }
   }, [users]);
 
   const updateUser = React.useCallback((id: string, updates: Partial<AppUser>) => {

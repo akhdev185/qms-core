@@ -34,7 +34,14 @@ export default function AdminAccounts() {
   const handleAdd = () => {
     if (!newUser.name || !newUser.email) return;
     // New users start inactive until approved
-    addUser({ name: newUser.name, email: newUser.email, role: newUser.role, password: "123456", active: false, needsApprovalNotification: false });
+    addUser({
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      password: "123456",
+      active: user?.role === "admin",
+      needsApprovalNotification: false
+    });
     setNewUser({ name: "", email: "", role: "user" });
   };
 
