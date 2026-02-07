@@ -18,7 +18,7 @@ export type AppUser = {
 type AuthContextValue = {
   user: AppUser | null;
   users: AppUser[];
-  login: (email: string, password: string) => { ok: boolean; code: string; message: string; user?: AppUser };
+  login: (email: string, password: string) => { ok: boolean; code: string; message: string; user?: AppUser; backend: "supabase" | "local" };
   logout: () => void;
   addUser: (user: Omit<AppUser, "id">) => void;
   updateUser: (id: string, updates: Partial<AppUser>) => void;
@@ -106,34 +106,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const bootstrap = async () => {
       if (supabase) {
-        const { data, error } = await supabase.from("profiles").select("*");
-        const rows = Array.isArray(data) ? data : [];
-        if (!error) {
-          const hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
-          if (!hasAdmin) {
-            const adminId = crypto.randomUUID();
-            await supabase.from("profiles").insert({
-              id: adminId,
+        const selectOnce = async () => {
+          const { data, error } = await supabase.from("profiles").select("*");
+          return { rows: Array.isArray(data) ? data : [], error };
+        };
+        let { rows, error } = await selectOnce();
+        let hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
+        if (!hasAdmin) {
+          const adminId = crypto.randomUUID();
+          const { error: insertErr } = await supabase.from("profiles").insert({
+            id: adminId,
+            name: "admin",
+            email: "admin@local",
+            password: "admin",
+            role: "admin",
+            active: true,
+            last_login_at: 0,
+          });
+          if (!insertErr) {
+            const res = await selectOnce();
+            rows = res.rows;
+            error = res.error;
+            hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
+          }
+        }
+        if (error || rows.length === 0 || !hasAdmin) {
+          const local = loadUsersLocal();
+          const hasLocalAdmin = local.some(u => u.email.toLowerCase() === "admin@local");
+          if (!hasLocalAdmin) {
+            const seeded: AppUser = {
+              id: crypto.randomUUID(),
               name: "admin",
               email: "admin@local",
               password: "admin",
               role: "admin",
               active: true,
-              last_login_at: 0,
-            });
+              lastLoginAt: 0,
+            };
+            const merged = [...local, seeded];
+            saveUsersLocal(merged);
+            setUsers(merged);
+          } else {
+            setUsers(local);
           }
+        } else {
+          const mapped = rows.map((r: ProfileRow) => ({
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            password: r.password || "",
+            role: r.role || "user",
+            active: !!r.active,
+            lastLoginAt: r.last_login_at || 0,
+            needsApprovalNotification: false,
+          })) as AppUser[];
+          setUsers(mapped);
         }
-        const mapped = rows.map((r: ProfileRow) => ({
-          id: r.id,
-          name: r.name,
-          email: r.email,
-          password: r.password || "",
-          role: r.role || "user",
-          active: !!r.active,
-          lastLoginAt: r.last_login_at || 0,
-          needsApprovalNotification: false,
-        })) as AppUser[];
-        setUsers(mapped);
       } else {
         try {
           const existing = await apiFetch<AppUser[]>("/api/users");
@@ -239,22 +267,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = React.useCallback((email: string, password: string) => {
+    const backend: "supabase" | "local" = supabase ? "supabase" : "local";
     if (!email.trim()) {
-      return { ok: false, code: "email_empty", message: "البريد الإلكتروني فارغ" };
+      return { ok: false, code: "email_empty", message: "البريد الإلكتروني فارغ", backend };
     }
     if (!password.trim()) {
-      return { ok: false, code: "password_empty", message: "كلمة المرور فارغة" };
+      return { ok: false, code: "password_empty", message: "كلمة المرور فارغة", backend };
     }
     const found = users.find(x => x.email.toLowerCase() === email.toLowerCase());
     if (!found) {
-      const backendNote = supabase ? "" : " (يتم استخدام التخزين المحلي)";
-      return { ok: false, code: "not_found", message: `الحساب غير موجود${backendNote}` };
+      return { ok: false, code: "not_found", message: "الحساب غير موجود", backend };
     }
     if (!found.active) {
-      return { ok: false, code: "inactive", message: "الحساب غير مُفعّل. انتظر موافقة الأدمن" };
+      return { ok: false, code: "inactive", message: "الحساب غير مُفعّل. انتظر موافقة الأدمن", backend };
     }
     if (found.password !== password) {
-      return { ok: false, code: "wrong_password", message: "كلمة المرور غير صحيحة" };
+      return { ok: false, code: "wrong_password", message: "كلمة المرور غير صحيحة", backend };
     }
     const u = found;
     const updated = users.map(x => {
@@ -278,7 +306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(u);
     saveSession(u.id);
-    return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u };
+    return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend };
   }, [users]);
 
   const logout = React.useCallback(() => {

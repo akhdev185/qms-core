@@ -20,7 +20,8 @@ export default function Login() {
     const res = login(email, password);
     setIsLoading(false);
     if (!res.ok) {
-      toast({ title: "فشل تسجيل الدخول", description: res.message, variant: "destructive" });
+      const backendNote = res.backend === "supabase" ? "النظام: Supabase" : "النظام: تخزين محلي";
+      toast({ title: "فشل تسجيل الدخول", description: `${res.message} — ${backendNote}`, variant: "destructive" });
       return;
     }
     try {
