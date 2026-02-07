@@ -29,6 +29,7 @@ type AuthContextValue = {
 
 const USERS_KEY = "qms_users";
 const SESSION_KEY = "qms_session";
+const ACTIVATED_KEY = "qms_activated_emails";
 
 const apiBase = (import.meta as unknown as { env?: Record<string, unknown> }).env?.DEV ? "http://localhost:3001" : "";
 
@@ -77,6 +78,24 @@ function saveSession(userId: string | null) {
     return;
     }
   localStorage.setItem(SESSION_KEY, JSON.stringify({ userId }));
+}
+
+function loadActivatedEmails(): string[] {
+  try {
+    const raw = localStorage.getItem(ACTIVATED_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map((e: string) => String(e).toLowerCase()) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveActivatedEmails(emails: string[]) {
+  try {
+    const norm = emails.map(e => e.toLowerCase());
+    localStorage.setItem(ACTIVATED_KEY, JSON.stringify(norm));
+  } catch { void 0; }
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -281,7 +300,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!found) {
       return { ok: false, code: "not_found", message: "الحساب غير موجود", backend };
     }
-    if (!found.active) {
+    const activated = new Set(loadActivatedEmails());
+    const isLocallyActivated = activated.has(found.email.toLowerCase());
+    if (!found.active && !isLocallyActivated) {
       return { ok: false, code: "inactive", message: "الحساب غير مُفعّل. انتظر موافقة الأدمن", backend };
     }
     if (found.password !== password) {
@@ -365,6 +386,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }).eq("id", id).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
       saveUsersLocal(updated);
     }
+    const target = updated.find(u => u.id === id);
+    if (target) {
+      const current = new Set(loadActivatedEmails());
+      const key = target.email.toLowerCase();
+      if (target.active) {
+        current.add(key);
+      } else {
+        current.delete(key);
+      }
+      saveActivatedEmails(Array.from(current));
+    }
     if (user && user.id === id) {
       setUser({ ...user, ...updates });
     }
@@ -422,7 +454,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             byEmail.set(key, u);
           }
         }
-        const mergedArr = Array.from(byEmail.values());
+        let mergedArr = Array.from(byEmail.values());
+        const activated = new Set(loadActivatedEmails());
+        mergedArr = mergedArr.map(u => activated.has(u.email.toLowerCase()) ? { ...u, active: true } : u);
         saveUsersLocal(mergedArr);
         setUsers(mergedArr);
         const currentId = loadSession();
