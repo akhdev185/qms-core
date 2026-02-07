@@ -102,15 +102,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })();
   const [users, setUsers] = React.useState<AppUser[]>(initialLocal);
   const [user, setUser] = React.useState<AppUser | null>(null);
+  const [supabaseDisabled, setSupabaseDisabled] = React.useState(false);
 
   React.useEffect(() => {
     const bootstrap = async () => {
-      if (supabase) {
+      if (supabase && !supabaseDisabled) {
         const selectOnce = async () => {
           const { data, error } = await supabase.from("profiles").select("*");
           return { rows: Array.isArray(data) ? data : [], error };
         };
         let { rows, error } = await selectOnce();
+        if (error) {
+          setSupabaseDisabled(true);
+        }
         let hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
         if (!hasAdmin) {
           const adminId = crypto.randomUUID();
@@ -128,6 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             rows = res.rows;
             error = res.error;
             hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
+          } else {
+            setSupabaseDisabled(true);
           }
         }
         const mapped = rows.map((r: ProfileRow) => ({
@@ -264,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = React.useCallback((email: string, password: string) => {
-    const backend: "supabase" | "local" = supabase ? "supabase" : "local";
+    const backend: "supabase" | "local" = supabase && !supabaseDisabled ? "supabase" : "local";
     if (!email.trim()) {
       return { ok: false, code: "email_empty", message: "البريد الإلكتروني فارغ", backend };
     }
@@ -295,11 +301,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return x;
     });
     setUsers(updated);
-    if (!supabase) {
+    if (!supabase || supabaseDisabled) {
       apiFetch<AppUser>("/api/users", {
         method: "PUT",
         body: JSON.stringify({ id: u.id, lastLoginAt: Date.now(), needsApprovalNotification: false }),
       }).catch(() => void 0);
+    } else {
+      supabase.from("profiles").update({ last_login_at: Date.now() }).eq("id", u.id)
+        .then(({ error }) => { if (error) setSupabaseDisabled(true); })
+        .catch(() => setSupabaseDisabled(true));
     }
     setUser(u);
     saveSession(u.id);
@@ -321,7 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(newUser),
       }).catch(() => saveUsersLocal(updated));
     }
-    if (supabase) {
+    if (supabase && !supabaseDisabled) {
       supabase.from("profiles").insert({
         id: newUser.id,
         name: newUser.name,
@@ -330,7 +340,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: newUser.role,
         active: newUser.active,
         last_login_at: newUser.lastLoginAt || 0,
-      }).then(() => {}).catch(() => {});
+      }).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
       saveUsersLocal(updated);
     }
   }, [users]);
@@ -344,7 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ id, ...updates }),
       }).catch(() => saveUsersLocal(updated));
     }
-    if (supabase) {
+    if (supabase && !supabaseDisabled) {
       supabase.from("profiles").update({
         name: updates.name,
         email: updates.email,
@@ -352,7 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: updates.role,
         active: updates.active,
         last_login_at: updates.lastLoginAt,
-      }).eq("id", id).then(() => {}).catch(() => {});
+      }).eq("id", id).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
       saveUsersLocal(updated);
     }
     if (user && user.id === id) {
@@ -369,8 +379,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ id }),
       }).catch(() => saveUsersLocal(updated));
     }
-    if (supabase) {
-      supabase.from("profiles").delete().eq("id", id).then(() => {}).catch(() => {});
+    if (supabase && !supabaseDisabled) {
+      supabase.from("profiles").delete().eq("id", id).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
     }
     saveUsersLocal(updated);
     if (user && user.id === id) {
@@ -381,7 +391,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const reloadUsers = React.useCallback(() => {
     const run = async () => {
-      if (supabase) {
+      if (supabase && !supabaseDisabled) {
         const { data } = await supabase.from("profiles").select("*");
         const rows = Array.isArray(data) ? data : [];
         const mapped = rows.map((r: ProfileRow) => ({
