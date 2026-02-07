@@ -130,38 +130,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
           }
         }
-        if (error || rows.length === 0 || !hasAdmin) {
-          const local = loadUsersLocal();
-          const hasLocalAdmin = local.some(u => u.email.toLowerCase() === "admin@local");
-          if (!hasLocalAdmin) {
-            const seeded: AppUser = {
-              id: crypto.randomUUID(),
-              name: "admin",
-              email: "admin@local",
-              password: "admin",
-              role: "admin",
-              active: true,
-              lastLoginAt: 0,
-            };
-            const merged = [...local, seeded];
-            saveUsersLocal(merged);
-            setUsers(merged);
-          } else {
-            setUsers(local);
-          }
-        } else {
-          const mapped = rows.map((r: ProfileRow) => ({
-            id: r.id,
-            name: r.name,
-            email: r.email,
-            password: r.password || "",
-            role: r.role || "user",
-            active: !!r.active,
-            lastLoginAt: r.last_login_at || 0,
-            needsApprovalNotification: false,
-          })) as AppUser[];
-          setUsers(mapped);
+        const mapped = rows.map((r: ProfileRow) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          password: r.password || "",
+          role: r.role || "user",
+          active: !!r.active,
+          lastLoginAt: r.last_login_at || 0,
+          needsApprovalNotification: false,
+        })) as AppUser[];
+        const local = loadUsersLocal();
+        const byEmail = new Map<string, AppUser>();
+        for (const u of local) byEmail.set(u.email.toLowerCase(), u);
+        for (const u of mapped) byEmail.set(u.email.toLowerCase(), u);
+        let mergedArr = Array.from(byEmail.values());
+        if (!byEmail.has("admin@local")) {
+          const seeded: AppUser = {
+            id: crypto.randomUUID(),
+            name: "admin",
+            email: "admin@local",
+            password: "admin",
+            role: "admin",
+            active: true,
+            lastLoginAt: 0,
+          };
+          mergedArr = [...mergedArr, seeded];
         }
+        saveUsersLocal(mergedArr);
+        setUsers(mergedArr);
       } else {
         try {
           const existing = await apiFetch<AppUser[]>("/api/users");
@@ -334,6 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         active: newUser.active,
         last_login_at: newUser.lastLoginAt || 0,
       }).then(() => {}).catch(() => {});
+      saveUsersLocal(updated);
     }
   }, [users]);
 
@@ -355,6 +353,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         active: updates.active,
         last_login_at: updates.lastLoginAt,
       }).eq("id", id).then(() => {}).catch(() => {});
+      saveUsersLocal(updated);
     }
     if (user && user.id === id) {
       setUser({ ...user, ...updates });
@@ -373,6 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (supabase) {
       supabase.from("profiles").delete().eq("id", id).then(() => {}).catch(() => {});
     }
+    saveUsersLocal(updated);
     if (user && user.id === id) {
       setUser(null);
       saveSession(null);
