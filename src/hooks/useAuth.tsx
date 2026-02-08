@@ -131,9 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { rows: Array.isArray(data) ? data : [], error };
         };
         let { rows, error } = await selectOnce();
-        if (error) {
-          setSupabaseDisabled(true);
-        }
+        if (error) { void 0; }
         let hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
         if (!hasAdmin) {
           const adminId = crypto.randomUUID();
@@ -152,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             error = res.error;
             hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
           } else {
-            setSupabaseDisabled(true);
+            // keep Supabase enabled; surface errors via UI flows instead
           }
         }
         const mapped = rows.map((r: ProfileRow) => ({
@@ -165,12 +163,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastLoginAt: r.last_login_at || 0,
           needsApprovalNotification: false,
         })) as AppUser[];
-        const local = loadUsersLocal();
-        const byEmail = new Map<string, AppUser>();
-        for (const u of local) byEmail.set(u.email.toLowerCase(), u);
-        for (const u of mapped) byEmail.set(u.email.toLowerCase(), u);
-        let mergedArr = Array.from(byEmail.values());
-        if (!byEmail.has("admin@local")) {
+        let mergedArr = mapped;
+        const hasAdmin = mergedArr.some(u => u.email.toLowerCase() === "admin@local");
+        if (!hasAdmin) {
           const seeded: AppUser = {
             id: crypto.randomUUID(),
             name: "admin",
@@ -182,7 +177,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           mergedArr = [...mergedArr, seeded];
         }
-        saveUsersLocal(mergedArr);
         setUsers(mergedArr);
       } else {
         try {
@@ -240,47 +234,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u = users.find(x => x.id === userId) || null;
         setUser(u);
       } else {
-        apiFetch<AppUser[]>("/api/users").then(all => {
-          const u = all.find(x => x.id === userId) || null;
-          setUser(u);
-        }).catch(() => setUser(null));
+        // prefer Supabase; if it fails, keep current session state
+        const u = users.find(x => x.id === userId) || null;
+        setUser(u);
       }
     }
   }, []);
 
   React.useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === USERS_KEY) {
-        apiFetch<AppUser[]>("/api/users").then(updated => {
-          setUsers(updated);
-          const currentId = loadSession();
-          if (currentId) {
-            const u = updated.find(x => x.id === currentId) || null;
-            setUser(u);
-          }
-        }).catch(() => {
-          const updated = loadUsersLocal();
-          setUsers(updated);
-          const currentId = loadSession();
-          if (currentId) {
-            const u = updated.find(x => x.id === currentId) || null;
-            setUser(u);
-          }
-        });
-      }
       if (e.key === SESSION_KEY) {
         const currentId = loadSession();
         if (!currentId) {
           setUser(null);
         } else {
-          apiFetch<AppUser[]>("/api/users").then(updated => {
-            const u = updated.find(x => x.id === currentId) || null;
-            setUser(u);
-          }).catch(() => {
-            const updated = loadUsersLocal();
-            const u = updated.find(x => x.id === currentId) || null;
-            setUser(u);
-          });
+        const u = users.find(x => x.id === currentId) || null;
+        setUser(u);
         }
       }
     };
@@ -317,15 +286,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return x;
     });
     setUsers(updated);
-    if (!supabase || supabaseDisabled) {
-      apiFetch<AppUser>("/api/users", {
-        method: "PUT",
-        body: JSON.stringify({ id: u.id, lastLoginAt: Date.now(), needsApprovalNotification: false }),
-      }).catch(() => void 0);
-    } else {
+    if (supabase) {
       supabase.from("profiles").update({ last_login_at: Date.now() }).eq("id", u.id)
-        .then(({ error }) => { if (error) setSupabaseDisabled(true); })
-        .catch(() => setSupabaseDisabled(true));
+        .then(() => void 0)
+        .catch(() => void 0);
     }
     setUser(u);
     saveSession(u.id);
@@ -341,13 +305,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const newUser: AppUser = { ...userInput, id: crypto.randomUUID() };
     const updated = [...users, newUser];
     setUsers(updated);
-    if (!supabase) {
-      apiFetch<AppUser>("/api/users", {
-        method: "POST",
-        body: JSON.stringify(newUser),
-      }).catch(() => saveUsersLocal(updated));
-    }
-    if (supabase && !supabaseDisabled) {
+    if (supabase) {
       supabase.from("profiles").insert({
         id: newUser.id,
         name: newUser.name,
@@ -356,21 +314,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: newUser.role,
         active: newUser.active,
         last_login_at: newUser.lastLoginAt || 0,
-      }).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
-      saveUsersLocal(updated);
+      }).then(() => void 0).catch(() => void 0);
     }
   }, [users]);
 
   const updateUser = React.useCallback((id: string, updates: Partial<AppUser>) => {
     const updated = users.map(u => (u.id === id ? { ...u, ...updates } : u));
     setUsers(updated);
-    if (!supabase) {
-      apiFetch<AppUser>("/api/users", {
-        method: "PUT",
-        body: JSON.stringify({ id, ...updates }),
-      }).catch(() => saveUsersLocal(updated));
-    }
-    if (supabase && !supabaseDisabled) {
+    if (supabase) {
       supabase.from("profiles").update({
         name: updates.name,
         email: updates.email,
@@ -378,8 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: updates.role,
         active: updates.active,
         last_login_at: updates.lastLoginAt,
-      }).eq("id", id).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
-      saveUsersLocal(updated);
+      }).eq("id", id).then(() => void 0).catch(() => void 0);
     }
     if (user && user.id === id) {
       setUser({ ...user, ...updates });
@@ -389,16 +339,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const removeUser = React.useCallback((id: string) => {
     const updated = users.filter(u => u.id !== id);
     setUsers(updated);
-    if (!supabase) {
-      apiFetch("/api/users", {
-        method: "DELETE",
-        body: JSON.stringify({ id }),
-      }).catch(() => saveUsersLocal(updated));
+    if (supabase) {
+      supabase.from("profiles").delete().eq("id", id).then(() => void 0).catch(() => void 0);
     }
-    if (supabase && !supabaseDisabled) {
-      supabase.from("profiles").delete().eq("id", id).then(({ error }) => { if (error) setSupabaseDisabled(true); }).catch(() => setSupabaseDisabled(true));
-    }
-    saveUsersLocal(updated);
     if (user && user.id === id) {
       setUser(null);
       saveSession(null);
@@ -420,50 +363,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastLoginAt: r.last_login_at || 0,
           needsApprovalNotification: false,
         })) as AppUser[];
-        const local = loadUsersLocal();
-        const byEmail = new Map<string, AppUser>();
-        for (const u of mapped) byEmail.set(u.email.toLowerCase(), u);
-        for (const u of local) {
-          const key = u.email.toLowerCase();
-          const remote = byEmail.get(key);
-          if (remote) {
-            byEmail.set(key, {
-              ...remote,
-              role: u.role ?? remote.role,
-              active: typeof u.active === "boolean" ? u.active : remote.active,
-              password: u.password ?? remote.password,
-              lastLoginAt: u.lastLoginAt ?? remote.lastLoginAt,
-            });
-          } else {
-            byEmail.set(key, u);
-          }
-        }
-        const mergedArr = Array.from(byEmail.values());
-        saveUsersLocal(mergedArr);
-        setUsers(mergedArr);
+        setUsers(mapped);
         const currentId = loadSession();
         if (currentId) {
-          const u = mergedArr.find(x => x.id === currentId) || null;
+          const u = mapped.find(x => x.id === currentId) || null;
           setUser(u);
         }
       } else {
-        try {
-          const updated = await apiFetch<AppUser[]>("/api/users");
-          setUsers(updated);
-          const currentId = loadSession();
-          if (currentId) {
-            const u = updated.find(x => x.id === currentId) || null;
-            setUser(u);
-          }
-        } catch {
-          const updated = loadUsersLocal();
-          setUsers(updated);
-          const currentId = loadSession();
-          if (currentId) {
-            const u = updated.find(x => x.id === currentId) || null;
-            setUser(u);
-          }
-        }
+        setUsers([]);
       }
     };
     await run();
