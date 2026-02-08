@@ -8,18 +8,23 @@ on:
 jobs:
   mirror:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Mirror to work
+      - name: Mirror to work using gh auth
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.WORK_GH_TOKEN }}
+          WORK_GH_TOKEN: ${{ secrets.WORK_GH_TOKEN }}
         run: |
           set -euo pipefail
-          git remote add work "https://x-access-token:${GH_TOKEN}@github.com/akhdev185/qms-core.git"
+          echo "$WORK_GH_TOKEN" | gh auth login --with-token
+          git remote set-url origin "https://github.com/KEPV18/qms.git"
+          git remote add work "https://github.com/akhdev185/qms-core.git"
+          gh auth setup-git
           git push --force --prune work "refs/remotes/origin/*:refs/heads/*"
           git push --force --prune work --tags
