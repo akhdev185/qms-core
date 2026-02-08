@@ -22,3 +22,34 @@ jobs:
           git remote add work "https://x-access-token:${WORK_TOKEN}@github.com/akhdev185/qms-core.git"
           git push --force --prune work "refs/remotes/origin/*:refs/heads/*"
           git push --force --prune work --tags
+name: Mirror to work repo
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror to work
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.WORK_GH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Add work remote using token
+          git remote add work "https://x-access-token:${GH_TOKEN}@github.com/akhdev185/qms-core.git"
+
+          # Push all branches (origin/* -> work/*)
+          git push --force --prune work "refs/remotes/origin/*:refs/heads/*"
+
+          # Push all tags
+          git push --force --prune work --tags
