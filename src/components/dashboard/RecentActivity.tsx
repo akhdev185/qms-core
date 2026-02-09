@@ -10,17 +10,19 @@ interface RecentActivityProps {
 }
 
 function getActivityType(record: QMSRecord): "created" | "approved" | "pending" | "issue" {
-  // Use 'reviewed' flag as the source of truth for approval
-  if (record.reviewed) {
+  const reviews = record.fileReviews || {};
+  const reviewValues = Object.values(reviews) as Array<{ status?: string }>;
+  const hasApprovedFile = reviewValues.some(r => (r.status || "").toLowerCase() === "approved");
+
+  if (record.reviewed || hasApprovedFile) {
     return "approved";
   }
 
-  const auditStatus = record.auditStatus.toLowerCase();
+  const auditStatus = (record.auditStatus || "").toLowerCase();
   if (auditStatus.includes("nc") || auditStatus.includes("issue") || auditStatus.includes("invalid") || auditStatus.includes("❌")) {
     return "issue";
   }
 
-  // If not reviewed but has files, it's pending review
   const hasRecords = (record.actualRecordCount || 0) > 0 ||
     (record.lastSerial && record.lastSerial !== "No Files Yet");
 

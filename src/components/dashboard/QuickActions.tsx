@@ -197,19 +197,19 @@ export function QuickActions() {
       <Dialog open={riskOpen} onOpenChange={setRiskOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>إضافة خطر جديد</DialogTitle>
+            <DialogTitle>Add New Risk</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>القسم/العملية</Label>
+              <Label>Department / Process</Label>
               <Input value={riskForm.processDepartment} onChange={(e) => setRiskForm({ ...riskForm, processDepartment: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>وصف الخطر</Label>
+              <Label>Risk Description</Label>
               <Input value={riskForm.riskDescription} onChange={(e) => setRiskForm({ ...riskForm, riskDescription: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>السبب</Label>
+              <Label>Cause</Label>
               <Input value={riskForm.cause} onChange={(e) => setRiskForm({ ...riskForm, cause: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -241,15 +241,15 @@ export function QuickActions() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>إجراءات السيطرة</Label>
+              <Label>Control Actions</Label>
               <Input value={riskForm.actionControl} onChange={(e) => setRiskForm({ ...riskForm, actionControl: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>المالك</Label>
+              <Label>Owner</Label>
               <Input value={riskForm.owner} onChange={(e) => setRiskForm({ ...riskForm, owner: e.target.value })} />
             </div>
             <div className="flex justify-end">
-              <Button onClick={submitRisk}>حفظ</Button>
+              <Button onClick={submitRisk}>Save</Button>
             </div>
           </div>
         </DialogContent>
@@ -258,7 +258,7 @@ export function QuickActions() {
       <Dialog open={auditOpen} onOpenChange={setAuditOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>ملخص التدقيق</DialogTitle>
+            <DialogTitle>Audit Summary</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
@@ -276,7 +276,7 @@ export function QuickActions() {
               </div>
             </div>
             <div>
-              <div className="font-medium mb-2">نماذج بلا سجلات</div>
+              <div className="font-medium mb-2">Templates Without Records</div>
               <div className="space-y-2 max-h-40 overflow-auto">
                 {zeroRecordForms.map(f => (
                   <div key={f.code} className="flex justify-between items-center p-2 rounded border">
@@ -284,37 +284,37 @@ export function QuickActions() {
                     <Button variant="outline" size="sm" onClick={() => navigate(`/record/${encodeURIComponent(f.code)}`)}>عرض</Button>
                   </div>
                 ))}
-                {zeroRecordForms.length === 0 && <div className="text-sm text-muted-foreground">لا يوجد</div>}
+                {zeroRecordForms.length === 0 && <div className="text-sm text-muted-foreground">None</div>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="font-medium mb-2">متأخر</div>
+                <div className="font-medium mb-2">Overdue</div>
                 <div className="space-y-2 max-h-32 overflow-auto">
                   {overdueForms.map(f => (
                     <div key={f.code} className="flex justify-between items-center p-2 rounded border">
                       <div className="text-sm">{f.code} — {f.recordName}</div>
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/record/${encodeURIComponent(f.code)}`)}>عرض</Button>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/record/${encodeURIComponent(f.code)}`)}>View</Button>
                     </div>
                   ))}
-                  {overdueForms.length === 0 && <div className="text-sm text-muted-foreground">لا يوجد</div>}
+                  {overdueForms.length === 0 && <div className="text-sm text-muted-foreground">None</div>}
                 </div>
               </div>
               <div>
-                <div className="font-medium mb-2">قريب الإستحقاق</div>
+                <div className="font-medium mb-2">Near Due</div>
                 <div className="space-y-2 max-h-32 overflow-auto">
                   {nearDueForms.map(f => (
                     <div key={f.code} className="flex justify-between items-center p-2 rounded border">
                       <div className="text-sm">{f.code} — {f.recordName}</div>
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/record/${encodeURIComponent(f.code)}`)}>عرض</Button>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/record/${encodeURIComponent(f.code)}`)}>View</Button>
                     </div>
                   ))}
-                  {nearDueForms.length === 0 && <div className="text-sm text-muted-foreground">لا يوجد</div>}
+                  {nearDueForms.length === 0 && <div className="text-sm text-muted-foreground">None</div>}
                 </div>
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={() => navigate("/audit")}>فتح صفحة التدقيق</Button>
+              <Button onClick={() => navigate("/audit")}>Open Audit Page</Button>
             </div>
           </div>
         </DialogContent>
@@ -323,15 +323,15 @@ export function QuickActions() {
       <Dialog open={capaOpen} onOpenChange={setCapaOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تسجيل CAPA</DialogTitle>
+            <DialogTitle>Log CAPA</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>المصدر</Label>
+              <Label>Source</Label>
               <Input value={capaForm.sourceOfCAPA} onChange={(e) => setCapaForm({ ...capaForm, sourceOfCAPA: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>النوع</Label>
+              <Label>Type</Label>
               <Select value={capaForm.type} onValueChange={(v) => setCapaForm({ ...capaForm, type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -341,43 +341,43 @@ export function QuickActions() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>الوصف</Label>
+              <Label>Description</Label>
               <Input value={capaForm.description} onChange={(e) => setCapaForm({ ...capaForm, description: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>المرجع</Label>
+              <Label>Reference</Label>
               <Input value={capaForm.reference} onChange={(e) => setCapaForm({ ...capaForm, reference: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>تحليل السبب الجذري</Label>
+              <Label>Root Cause Analysis</Label>
               <Input value={capaForm.rootCauseAnalysis} onChange={(e) => setCapaForm({ ...capaForm, rootCauseAnalysis: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>الإجراء التصحيحي</Label>
+                <Label>Corrective Action</Label>
                 <Input value={capaForm.correctiveAction} onChange={(e) => setCapaForm({ ...capaForm, correctiveAction: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>الإجراء الوقائي</Label>
+                <Label>Preventive Action</Label>
                 <Input value={capaForm.preventiveAction} onChange={(e) => setCapaForm({ ...capaForm, preventiveAction: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>المسؤول</Label>
+                <Label>Responsible</Label>
                 <Input value={capaForm.responsiblePerson} onChange={(e) => setCapaForm({ ...capaForm, responsiblePerson: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>تاريخ الإتمام المستهدف</Label>
+                <Label>Target Completion Date</Label>
                 <Input type="date" value={capaForm.targetCompletionDate} onChange={(e) => setCapaForm({ ...capaForm, targetCompletionDate: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>خطر مرتبط</Label>
+              <Label>Related Risk</Label>
               <Input value={capaForm.relatedRisk} onChange={(e) => setCapaForm({ ...capaForm, relatedRisk: e.target.value })} />
             </div>
             <div className="flex justify-end">
-              <Button onClick={submitCAPA}>حفظ</Button>
+              <Button onClick={submitCAPA}>Save</Button>
             </div>
           </div>
         </DialogContent>
@@ -386,14 +386,14 @@ export function QuickActions() {
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>رفع مستند</DialogTitle>
+            <DialogTitle>Upload Document</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>البحث عن مجلد</Label>
+              <Label>Search Folder</Label>
               <div className="flex gap-2">
-                <Input placeholder="اكتب اسم المجلد" value={folderSearchTerm} onChange={(e) => setFolderSearchTerm(e.target.value)} />
-                <Button variant="outline" onClick={handleSearchFolders}>{isSearchingFolders ? "..." : "بحث"}</Button>
+                <Input placeholder="Type folder name" value={folderSearchTerm} onChange={(e) => setFolderSearchTerm(e.target.value)} />
+                <Button variant="outline" onClick={handleSearchFolders}>{isSearchingFolders ? "..." : "Search"}</Button>
               </div>
               <div className="max-h-32 overflow-auto space-y-2">
                 {folderResults.map(fr => (
@@ -408,15 +408,15 @@ export function QuickActions() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>أو إنشاء مجلد جديد</Label>
-              <Input placeholder="اسم المجلد الجديد" value={uploadTarget.newFolderName} onChange={(e) => setUploadTarget({ ...uploadTarget, newFolderName: e.target.value })} />
+              <Label>Or create new folder</Label>
+              <Input placeholder="New folder name" value={uploadTarget.newFolderName} onChange={(e) => setUploadTarget({ ...uploadTarget, newFolderName: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>اختيار ملف</Label>
+              <Label>Choose file</Label>
               <Input type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
             </div>
             <div className="flex justify-end">
-              <Button onClick={submitUpload}>رفع</Button>
+              <Button onClick={submitUpload}>Upload</Button>
             </div>
           </div>
         </DialogContent>
