@@ -4,7 +4,8 @@ export default async function handler(req, res) {
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
     const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
     const REDIRECT_URI = process.env.REDIRECT_URI;
-    const PROD_HOST = 'qms-zeta.vercel.app';
+    // UPDATED: Use the actual Vercel domain assigned to your project
+    const PROD_HOST = 'qms-git-main-kepv18s-projects.vercel.app';
 
     // Health check logic inside the auth handler for debugging env vars
     if (req.query.health === 'true') {

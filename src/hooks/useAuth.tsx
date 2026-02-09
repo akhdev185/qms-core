@@ -370,7 +370,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(u);
         }
       } else {
-        setUsers([]);
+        const local = loadUsersLocal();
+        setUsers(local);
+        const currentId = loadSession();
+        if (currentId) {
+            const u = local.find(x => x.id === currentId) || null;
+            setUser(u);
+        }
       }
     };
     await run();
