@@ -32,6 +32,7 @@ const SESSION_KEY = "qms_session";
 const ACTIVATED_KEY = "qms_activated_emails";
 
 const apiBase = (import.meta as unknown as { env?: Record<string, unknown> }).env?.DEV ? "http://localhost:3001" : "";
+const AUTH_LOCAL_DISABLED = (((import.meta as unknown as { env?: Record<string, unknown> }).env?.VITE_AUTH_LOCAL_DISABLED) ?? "true") === "true";
 
 async function apiFetch<T = unknown>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBase}${path}`, {
@@ -102,6 +103,7 @@ const AuthContext = React.createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialLocal = (() => {
+    if (AUTH_LOCAL_DISABLED) return [];
     const existing = loadUsersLocal();
     if (existing.length === 0) {
       const seeded: AppUser = {
@@ -182,51 +184,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUsers(mergedArr);
       } else {
-        try {
-          const existing = await apiFetch<AppUser[]>("/api/users");
-          const hasAdmin = existing.some(u => u.email.toLowerCase() === "admin@local");
-          if (!hasAdmin) {
-            const admin: Omit<AppUser, "id"> = {
-              name: "admin",
-              email: "admin@local",
-              password: "admin",
-              role: "admin",
-              active: true,
-              lastLoginAt: 0,
-            };
-            try {
-              const created = await apiFetch<AppUser>("/api/users", {
-                method: "POST",
-                body: JSON.stringify(admin),
-              });
-              setUsers([...existing, created]);
-            } catch {
-              const seeded: AppUser = { ...admin, id: crypto.randomUUID() };
-              const merged = [...existing, seeded];
-              saveUsersLocal(merged);
-              setUsers(merged);
+        if (AUTH_LOCAL_DISABLED) {
+          setUsers([]);
+        } else {
+          try {
+            const existing = await apiFetch<AppUser[]>("/api/users");
+            const hasAdmin = existing.some(u => u.email.toLowerCase() === "admin@local");
+            if (!hasAdmin) {
+              const admin: Omit<AppUser, "id"> = {
+                name: "admin",
+                email: "admin@local",
+                password: "admin",
+                role: "admin",
+                active: true,
+                lastLoginAt: 0,
+              };
+              try {
+                const created = await apiFetch<AppUser>("/api/users", {
+                  method: "POST",
+                  body: JSON.stringify(admin),
+                });
+                setUsers([...existing, created]);
+              } catch {
+                const seeded: AppUser = { ...admin, id: crypto.randomUUID() };
+                const merged = [...existing, seeded];
+                saveUsersLocal(merged);
+                setUsers(merged);
+              }
+            } else {
+              setUsers(existing);
             }
-          } else {
-            setUsers(existing);
+          } catch {
+            const existing = loadUsersLocal();
+            let list = existing;
+            const hasAdmin = existing.some(u => u.email.toLowerCase() === "admin@local");
+            if (!hasAdmin) {
+              const seeded: AppUser = {
+                id: crypto.randomUUID(),
+                name: "admin",
+                email: "admin@local",
+                password: "admin",
+                role: "admin",
+                active: true,
+                lastLoginAt: 0,
+              };
+              list = [...existing, seeded];
+              saveUsersLocal(list);
+            }
+            setUsers(list);
           }
-        } catch {
-          const existing = loadUsersLocal();
-          let list = existing;
-          const hasAdmin = existing.some(u => u.email.toLowerCase() === "admin@local");
-          if (!hasAdmin) {
-            const seeded: AppUser = {
-              id: crypto.randomUUID(),
-              name: "admin",
-              email: "admin@local",
-              password: "admin",
-              role: "admin",
-              active: true,
-              lastLoginAt: 0,
-            };
-            list = [...existing, seeded];
-            saveUsersLocal(list);
-          }
-          setUsers(list);
         }
       }
     };
@@ -262,6 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = React.useCallback((email: string, password: string) => {
     const backend: "supabase" | "local" = supabase && !supabaseDisabled ? "supabase" : "local";
+    if (AUTH_LOCAL_DISABLED && backend === "local") {
+      return { ok: false, code: "supabase_only", message: "التسجيل وتسجيل الدخول متوقفان محليًا. Supabase مطلوب", backend: "supabase" };
+    }
     if (!email.trim()) {
       return { ok: false, code: "email_empty", message: "البريد الإلكتروني فارغ", backend };
     }
@@ -307,7 +316,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const addUser = React.useCallback((userInput: Omit<AppUser, "id">) => {
     const newUser: AppUser = { ...userInput, id: crypto.randomUUID() };
     const updated = [...users, newUser];
-    setUsers(updated);
+    if (!AUTH_LOCAL_DISABLED) {
+      setUsers(updated);
+    }
     if (supabase) {
       supabase.from("profiles").insert({
         id: newUser.id,
@@ -325,7 +336,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = React.useCallback((id: string, updates: Partial<AppUser>) => {
     const updated = users.map(u => (u.id === id ? { ...u, ...updates } : u));
-    setUsers(updated);
+    if (!AUTH_LOCAL_DISABLED) {
+      setUsers(updated);
+    }
     if (supabase) {
       supabase.from("profiles").update({
         name: updates.name,
@@ -343,7 +356,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const removeUser = React.useCallback((id: string) => {
     const updated = users.filter(u => u.id !== id);
-    setUsers(updated);
+    if (!AUTH_LOCAL_DISABLED) {
+      setUsers(updated);
+    }
     if (supabase) {
       supabase.from("profiles").delete().eq("id", id).then(() => void 0).catch(() => void 0);
     }
@@ -359,12 +374,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase.from("profiles").select("*");
         if (error) {
           setSupabaseDisabled(true);
-          const local = loadUsersLocal();
-          setUsers(local);
-          const currentId = loadSession();
-          if (currentId) {
-            const u = local.find(x => x.id === currentId) || null;
-            setUser(u);
+          if (!AUTH_LOCAL_DISABLED) {
+            const local = loadUsersLocal();
+            setUsers(local);
+            const currentId = loadSession();
+            if (currentId) {
+              const u = local.find(x => x.id === currentId) || null;
+              setUser(u);
+            }
+          } else {
+            setUsers([]);
           }
           return;
         }
@@ -386,12 +405,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(u);
         }
       } else {
-        const local = loadUsersLocal();
-        setUsers(local);
-        const currentId = loadSession();
-        if (currentId) {
-            const u = local.find(x => x.id === currentId) || null;
-            setUser(u);
+        if (!AUTH_LOCAL_DISABLED) {
+          const local = loadUsersLocal();
+          setUsers(local);
+          const currentId = loadSession();
+          if (currentId) {
+              const u = local.find(x => x.id === currentId) || null;
+              setUser(u);
+          }
+        } else {
+          setUsers([]);
         }
       }
     };
