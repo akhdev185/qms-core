@@ -67,11 +67,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 setDriveMessage(result.message);
                 toast({ title: "Drive Permission Failed", description: result.message, variant: "destructive" });
             }
-        } catch (error: any) {
+        } catch (error) {
             setDriveStatus('error');
             setDriveMessage("An unexpected error occurred.");
         }
     };
+  const handleGoogleSignIn = () => {
+    const isDev = import.meta.env.DEV;
+    const url = isDev ? "http://localhost:3001/api/auth" : "/api/auth";
+    window.location.href = url;
+  };
 
     const handleCheckServer = async () => {
         setServerStatus('checking');
@@ -166,7 +171,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                         </Alert>
                                     )}
                                 </CardContent>
-                                <CardFooter>
+                <CardFooter className="flex gap-2 flex-wrap">
                                     <Button
                                         variant={driveStatus === 'success' ? "outline" : "default"}
                                         onClick={handleCheckDrive}
@@ -176,6 +181,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                         {driveStatus === 'checking' && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                         Run Permission Check
                                     </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleGoogleSignIn}
+                    className="w-full sm:w-auto"
+                  >
+                    Connect Google Drive
+                  </Button>
                                 </CardFooter>
                             </Card>
 
