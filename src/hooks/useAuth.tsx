@@ -164,8 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           needsApprovalNotification: false,
         })) as AppUser[];
         let mergedArr = mapped;
-        const hasAdmin = mergedArr.some(u => u.email.toLowerCase() === "admin@local");
-        if (!hasAdmin) {
+        const hasAdminInMerged = mergedArr.some(u => u.email.toLowerCase() === "admin@local");
+        if (!hasAdminInMerged) {
           const seeded: AppUser = {
             id: crypto.randomUUID(),
             name: "admin",
