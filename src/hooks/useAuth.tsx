@@ -18,7 +18,7 @@ export type AppUser = {
 type AuthContextValue = {
   user: AppUser | null;
   users: AppUser[];
-  login: (email: string, password: string) => { ok: boolean; code: string; message: string; user?: AppUser; backend: "supabase" | "local" };
+  login: (email: string, password: string) => Promise<{ ok: boolean; code: string; message: string; user?: AppUser; backend: "supabase" | "local" }>;
   logout: () => void;
   addUser: (user: Omit<AppUser, "id">) => void;
   updateUser: (id: string, updates: Partial<AppUser>) => void;
@@ -137,37 +137,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         let { rows, error } = await selectOnce();
         if (error) { void 0; }
+        let rolesRows: any[] = [];
+        try {
+          const { data: rolesData } = await supabase.from("user_roles").select("*");
+          rolesRows = Array.isArray(rolesData) ? rolesData : [];
+        } catch { void 0; }
+        const roleByUserId = new Map<string, string>();
+        rolesRows.forEach((r: any) => {
+          if (r && typeof r.user_id === "string" && typeof r.role === "string") {
+            roleByUserId.set(r.user_id, r.role.toLowerCase());
+          }
+        });
         let hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
         if (!hasAdmin) {
           const adminId = crypto.randomUUID();
           const { error: insertErr } = await supabase.from("profiles").insert({
             id: adminId,
-            name: "admin",
+            user_id: adminId,
             email: "admin@local",
-            password: "admin",
-            role: "admin",
-            active: true,
-            last_login_at: 0,
+            is_active: true,
+            last_login: new Date(0).toISOString(),
           });
           if (!insertErr) {
+            try {
+              await supabase.from("user_roles").insert({
+                id: crypto.randomUUID(),
+                user_id: adminId,
+                role: "admin",
+              });
+            } catch { void 0; }
             const res = await selectOnce();
             rows = res.rows;
             error = res.error;
             hasAdmin = rows.some(r => String(r.email).toLowerCase() === "admin@local");
           } else {
-            setSupabaseDisabled(true);
+            void 0;
           }
         }
-        const mapped = rows.map((r: ProfileRow) => ({
-          id: r.id,
-          name: r.name,
-          email: r.email,
-          password: r.password || "",
-          role: r.role || "user",
-          active: !!r.active,
-          lastLoginAt: r.last_login_at || 0,
-          needsApprovalNotification: false,
-        })) as AppUser[];
+        const mapped = rows.map((r: any) => {
+          const lastLoginRaw = (r.last_login as string) || "";
+          const lastLoginAt = lastLoginRaw ? Date.parse(lastLoginRaw) || 0 : 0;
+          const role = roleByUserId.get(r.user_id || r.id) || "user";
+          return {
+            id: r.user_id || r.id,
+            name: r.name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
+            email: r.email || "",
+            password: "",
+            role,
+            active: !!(r.is_active ?? false),
+            lastLoginAt,
+            needsApprovalNotification: false,
+          } as AppUser;
+        });
         let mergedArr = mapped;
         const hasAdminInMerged = mergedArr.some(u => u.email.toLowerCase() === "admin@local");
         if (!hasAdminInMerged) {
@@ -175,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: crypto.randomUUID(),
             name: "admin",
             email: "admin@local",
-            password: "admin",
+            password: "",
             role: "admin",
             active: true,
             lastLoginAt: 0,
@@ -183,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           mergedArr = [...mergedArr, seeded];
         }
         setUsers(mergedArr);
+        setSupabaseDisabled(false);
       } else {
         if (AUTH_LOCAL_DISABLED) {
           setUsers([]);
@@ -266,16 +288,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const login = React.useCallback((email: string, password: string) => {
-    const backend: "supabase" | "local" = supabase && !supabaseDisabled ? "supabase" : "local";
-    if (AUTH_LOCAL_DISABLED && backend === "local") {
-      return { ok: false, code: "supabase_only", message: "التسجيل وتسجيل الدخول متوقفان محليًا. Supabase مطلوب", backend: "supabase" };
-    }
+  const login = React.useCallback(async (email: string, password: string) => {
+    const backend: "supabase" | "local" = supabase ? "supabase" : "local";
     if (!email.trim()) {
       return { ok: false, code: "email_empty", message: "البريد الإلكتروني فارغ", backend };
     }
     if (!password.trim()) {
       return { ok: false, code: "password_empty", message: "كلمة المرور فارغة", backend };
+    }
+    if (backend === "supabase") {
+      const { data: authRes, error: authErr } = await supabase!.auth.signInWithPassword({ email, password });
+      if (authErr || !authRes?.user?.id) {
+        return { ok: false, code: "wrong_password", message: "بيانات الاعتماد غير صحيحة أو الحساب غير موجود", backend };
+      }
+      const authUserId = authRes.user.id;
+      let profileRow: ProfileRow | null = null;
+      try {
+        const { data: profRows } = await supabase!
+          .from("profiles")
+          .select("*")
+          .eq("user_id", authUserId)
+          .limit(1);
+        const list = Array.isArray(profRows) ? (profRows as ProfileRow[]) : [];
+        if (list.length > 0) {
+          profileRow = list[0] || null;
+        }
+      } catch { void 0; }
+      if (!profileRow) {
+        const { error: upErr } = await supabase!.from("profiles").upsert(
+          {
+            id: crypto.randomUUID(),
+            user_id: authUserId,
+            email,
+            is_active: false,
+            last_login: new Date(0).toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+        if (!upErr) {
+          try {
+            const { data: profRows2 } = await supabase!
+              .from("profiles")
+              .select("*")
+              .eq("user_id", authUserId)
+              .limit(1);
+            const list2 = Array.isArray(profRows2) ? (profRows2 as ProfileRow[]) : [];
+            if (list2.length > 0) {
+              profileRow = list2[0] || null;
+            }
+          } catch { void 0; }
+        }
+      }
+      let role = "user";
+      try {
+        type UserRoleRow = { id?: string; user_id?: string; role?: string };
+        const { data: rolesRows } = await supabase!
+          .from("user_roles")
+          .select("*")
+          .eq("user_id", authUserId)
+          .limit(1);
+        const rlist = Array.isArray(rolesRows) ? (rolesRows as UserRoleRow[]) : [];
+        if (rlist.length > 0 && rlist[0]?.role) {
+          role = String(rlist[0].role).toLowerCase();
+        }
+      } catch { void 0; }
+      const lastLoginRaw = (profileRow?.last_login as string) || "";
+      const lastLoginAt = lastLoginRaw ? Date.parse(lastLoginRaw) || 0 : 0;
+      const isActive = !!(profileRow?.is_active ?? false);
+      if (!isActive) {
+        return { ok: false, code: "inactive", message: "الحساب غير مفعل", backend };
+      }
+      supabase!.from("profiles").update({ last_login: new Date().toISOString() }).eq("user_id", authUserId)
+        .then(() => void 0)
+        .catch(() => void 0);
+      const u: AppUser = {
+        id: authUserId,
+        name: profileRow?.name || email.split("@")[0],
+        email,
+        password: "",
+        role,
+        active: isActive,
+        lastLoginAt,
+        needsApprovalNotification: false,
+      };
+      setUsers(prev => {
+        const idx = prev.findIndex(x => x.id === u.id || x.email.toLowerCase() === u.email.toLowerCase());
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = { ...copy[idx], ...u };
+          return copy;
+        }
+        return [...prev, u];
+      });
+      setUser(u);
+      saveSession(u.id);
+      setSupabaseDisabled(false);
+      return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend };
+    }
+    if (AUTH_LOCAL_DISABLED) {
+      return { ok: false, code: "supabase_only", message: "التسجيل وتسجيل الدخول متوقفان محليًا. Supabase مطلوب", backend: "local" };
     }
     const found = users.find(x => x.email.toLowerCase() === email.toLowerCase());
     if (!found) {
@@ -284,29 +395,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (found.password !== password) {
       return { ok: false, code: "wrong_password", message: "كلمة المرور غير صحيحة", backend };
     }
-    const u = found;
-    const updated = users.map(x => {
-      if (x.id === u.id) {
-        const approvalJustGranted = !!x.needsApprovalNotification;
-        if (approvalJustGranted) {
-          try {
-            localStorage.setItem(`approval_just_granted:${x.email}`, "true");
-          } catch { void 0; }
-        }
-        return { ...x, lastLoginAt: Date.now(), needsApprovalNotification: false };
-      }
-      return x;
-    });
-    setUsers(updated);
-    if (supabase) {
-      supabase.from("profiles").update({ last_login_at: Date.now() }).eq("id", u.id)
-        .then(() => void 0)
-        .catch(() => void 0);
-    }
+    const u = { ...found, lastLoginAt: Date.now(), needsApprovalNotification: false };
+    setUsers(users.map(x => (x.id === u.id ? u : x)));
     setUser(u);
     saveSession(u.id);
     return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend };
-  }, [users]);
+  }, [users, supabaseDisabled]);
 
   const logout = React.useCallback(() => {
     setUser(null);
@@ -322,13 +416,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (supabase) {
       supabase.from("profiles").insert({
         id: newUser.id,
-        name: newUser.name,
+        user_id: newUser.id,
         email: newUser.email,
-        password: newUser.password,
-        role: newUser.role,
-        active: newUser.active,
-        last_login_at: newUser.lastLoginAt || 0,
-      }).then(() => void 0).catch(() => {
+        is_active: !!newUser.active,
+        last_login: new Date(0).toISOString(),
+      }).then(async () => {
+        try {
+          await supabase.from("user_roles").insert({
+            id: crypto.randomUUID(),
+            user_id: newUser.id,
+            role: newUser.role,
+          });
+        } catch { void 0; }
+      }).catch(() => {
         setSupabaseDisabled(true);
       });
     }
@@ -340,14 +440,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUsers(updated);
     }
     if (supabase) {
-      supabase.from("profiles").update({
-        name: updates.name,
-        email: updates.email,
-        password: updates.password,
-        role: updates.role,
-        active: updates.active,
-        last_login_at: updates.lastLoginAt,
-      }).eq("id", id).then(() => void 0).catch(() => void 0);
+      const payload: Record<string, unknown> = {};
+      if (typeof updates.email === "string") payload.email = updates.email;
+      if (typeof updates.active === "boolean") payload.is_active = updates.active;
+      if (typeof updates.lastLoginAt === "number") payload.last_login = new Date(updates.lastLoginAt).toISOString();
+      supabase.from("profiles").update(payload).eq("user_id", id).then(async () => {
+        if (typeof updates.role === "string") {
+          try {
+            await supabase.from("user_roles").upsert(
+              { id: crypto.randomUUID(), user_id: id, role: updates.role },
+              { onConflict: "user_id" }
+            );
+          } catch { void 0; }
+        }
+      }).catch(() => void 0);
     }
     if (user && user.id === id) {
       setUser({ ...user, ...updates });
@@ -360,7 +466,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUsers(updated);
     }
     if (supabase) {
-      supabase.from("profiles").delete().eq("id", id).then(() => void 0).catch(() => void 0);
+      supabase.from("user_roles").delete().eq("user_id", id).then(() => void 0).catch(() => void 0);
+      supabase.from("profiles").delete().eq("user_id", id).then(() => void 0).catch(() => void 0);
     }
     if (user && user.id === id) {
       setUser(null);
@@ -388,17 +495,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         const rows = Array.isArray(data) ? data : [];
-        const mapped = rows.map((r: ProfileRow) => ({
-          id: r.id,
-          name: r.name,
-          email: r.email,
-          password: r.password || "",
-          role: r.role || "user",
-          active: !!r.active,
-          lastLoginAt: r.last_login_at || 0,
-          needsApprovalNotification: false,
-        })) as AppUser[];
+        let rolesRows: any[] = [];
+        try {
+          const { data: rolesData } = await supabase.from("user_roles").select("*");
+          rolesRows = Array.isArray(rolesData) ? rolesData : [];
+        } catch { void 0; }
+        const roleByUserId = new Map<string, string>();
+        rolesRows.forEach((r: any) => {
+          if (r && typeof r.user_id === "string" && typeof r.role === "string") {
+            roleByUserId.set(r.user_id, r.role.toLowerCase());
+          }
+        });
+        const mapped = rows.map((r: any) => {
+          const lastLoginRaw = (r.last_login as string) || "";
+          const lastLoginAt = lastLoginRaw ? Date.parse(lastLoginRaw) || 0 : 0;
+          const role = roleByUserId.get(r.user_id || r.id) || "user";
+          return {
+            id: r.user_id || r.id,
+            name: r.name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
+            email: r.email || "",
+            password: "",
+            role,
+            active: !!(r.is_active ?? false),
+            lastLoginAt,
+            needsApprovalNotification: false,
+          } as AppUser;
+        });
         setUsers(mapped);
+        setSupabaseDisabled(false);
         const currentId = loadSession();
         if (currentId) {
           const u = mapped.find(x => x.id === currentId) || null;

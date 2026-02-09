@@ -18,7 +18,7 @@ export default function Login() {
   const handleLogin = async () => {
     setIsLoading(true);
     await reloadUsers();
-    const res = login(email.trim(), password.trim());
+    const res = await login(email.trim(), password.trim());
     setIsLoading(false);
     if (!res.ok) {
       const backendNote = res.backend === "supabase" ? "النظام: Supabase" : "النظام: تخزين محلي";

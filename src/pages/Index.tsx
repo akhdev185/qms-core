@@ -172,6 +172,16 @@ export default function Index() {
                 isLoading={isLoading}
               />
             </div>
+            <div onClick={() => navigate("/audit")} className="cursor-pointer">
+              <StatusCard
+                title="Never Filled"
+                value={records?.filter(r => (r.actualRecordCount || 0) === 0).length || 0}
+                subtitle="Forms with zero records ever"
+                icon={AlertTriangle}
+                variant="warning"
+                isLoading={isLoading}
+              />
+            </div>
             <div onClick={() => navigate("/audit?tab=pending")} className="cursor-pointer">
               <StatusCard
                 title="Pending Review"
@@ -244,6 +254,7 @@ export default function Index() {
                   complianceRate={auditSummary.complianceRate}
                   isLoading={isLoading}
                   onRefresh={handleRefresh}
+                  emptyFormsCount={records?.filter(r => (r.actualRecordCount || 0) === 0).length || 0}
                 />
                 <PendingActions records={records ?? []} isLoading={isLoading} />
               </div>

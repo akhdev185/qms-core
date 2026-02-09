@@ -16,8 +16,7 @@ import Register from "./pages/Register";
 import { AuthProvider } from "./hooks/useAuth";
 import { RequireAuth, RequireRole } from "./components/auth/Guards";
 import AdminAccounts from "./pages/AdminAccounts";
-import AdminGate from "./pages/AdminGate";
-import AdminAccessGuard from "./components/auth/AdminAccessGuard";
+// Removed AdminGate/AdminAccessGuard fallback
 import { ErrorBoundary } from "./components/ui/error-boundary";
 
 const queryClient = new QueryClient();
@@ -39,8 +38,7 @@ const App = () => (
               <Route path="/audit" element={<RequireAuth><AuditPage /></RequireAuth>} />
               <Route path="/archive" element={<RequireAuth><ArchivePage /></RequireAuth>} />
               <Route path="/risk-management" element={<RequireAuth><RiskManagementPage /></RequireAuth>} />
-              <Route path="/admin" element={<AdminGate />} />
-              <Route path="/admin/accounts" element={<AdminAccessGuard><AdminAccounts /></AdminAccessGuard>} />
+              <Route path="/admin/accounts" element={<RequireRole roles={["admin"]}><AdminAccounts /></RequireRole>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

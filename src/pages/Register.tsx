@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { addUser, users } = useAuth();
+  const { addUser, users, reloadUsers } = useAuth();
   const { toast } = useToast();
 
   const handleRegister = async () => {
@@ -30,10 +31,65 @@ export default function Register() {
       toast({ title: "الحساب موجود", description: "هذا البريد مسجل مسبقاً", variant: "destructive" });
       return;
     }
-    const role = "user";
-    // New accounts require admin approval
-    addUser({ name, email, password, role, active: false, needsApprovalNotification: false });
+    if (!supabase) {
+      setIsLoading(false);
+      toast({ title: "فشل إنشاء الحساب", description: "الربط بـ Supabase غير مضبوط. تأكد من VITE_SUPABASE_URL وVITE_SUPABASE_ANON_KEY", variant: "destructive" });
+      return;
+    }
+    const { data: signData, error: signErr } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (signErr || !signData?.user?.id) {
+      setIsLoading(false);
+      const msg = signErr?.message || "حدث خطأ أثناء إنشاء مستخدم Supabase";
+      toast({ title: "فشل إنشاء الحساب", description: msg, variant: "destructive" });
+      return;
+    }
+    const id = crypto.randomUUID();
+    const userId = signData.user.id;
+    const { error: insertErr } = await supabase.from("profiles").upsert(
+      {
+        id,
+        user_id: userId,
+        email,
+        is_active: false,
+        last_login: new Date(0).toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+    if (insertErr) {
+      setIsLoading(false);
+      const info = [
+        insertErr.message ? `الرسالة: ${insertErr.message}` : "",
+        insertErr.code ? `الكود: ${insertErr.code}` : "",
+        insertErr.details ? `تفاصيل: ${insertErr.details}` : "",
+        insertErr.hint ? `تلميح: ${insertErr.hint}` : "",
+      ].filter(Boolean).join(" — ");
+      const desc = info || "قاعدة البيانات مطلوبة حالياً. تحقق من سياسات RLS والصلاحيات";
+      toast({ title: "فشل إنشاء الحساب", description: desc, variant: "destructive" });
+      return;
+    }
+    try {
+      const { data: rolesExist } = await supabase.from("user_roles").select("id").eq("user_id", userId).limit(1);
+      if (Array.isArray(rolesExist) && rolesExist.length > 0) {
+        await supabase.from("user_roles").update({ role: "user" }).eq("user_id", userId);
+      } else {
+        await supabase.from("user_roles").insert({
+          id: crypto.randomUUID(),
+          user_id: userId,
+          role: "user",
+        });
+      }
+    } catch { void 0; }
+    await reloadUsers();
+    const { data } = await supabase.from("profiles").select("id").eq("user_id", userId).limit(1);
+    const confirmed = Array.isArray(data) && data.length > 0;
     setIsLoading(false);
+    if (!confirmed) {
+      toast({ title: "فشل إنشاء الحساب", description: "قاعدة البيانات مطلوبة حالياً. حاول مرة أخرى", variant: "destructive" });
+      return;
+    }
     toast({ title: "تم إنشاء الحساب", description: "يمكنك تسجيل الدخول الآن" });
     navigate("/login");
   };

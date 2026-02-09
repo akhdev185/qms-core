@@ -9,6 +9,7 @@ interface AuditReadinessProps {
   complianceRate: number;
   isLoading?: boolean;
   onRefresh?: () => void;
+  emptyFormsCount?: number;
 }
 
 const statusConfig = {
@@ -54,6 +55,7 @@ export function AuditReadiness({
   complianceRate,
   isLoading = false,
   onRefresh,
+  emptyFormsCount = 0,
 }: AuditReadinessProps) {
   if (isLoading) {
     return (
@@ -84,7 +86,7 @@ export function AuditReadiness({
 
   // Calculate overall progress safely
   const validModules = moduleStats.filter(m => m.formsCount > 0);
-  const displayCompliance = validModules.length > 0 ? complianceRate : 0;
+  const displayCompliance = validModules.length > 0 ? Math.max(0, Math.min(100, complianceRate)) : 0;
 
   return (
     <div className="glass-card rounded-lg">
@@ -107,6 +109,9 @@ export function AuditReadiness({
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-success" />
               <span className="text-2xl font-bold text-foreground">{displayCompliance}%</span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Never Filled: <span className="font-semibold text-foreground">{emptyFormsCount}</span>
             </div>
           </div>
         </div>
