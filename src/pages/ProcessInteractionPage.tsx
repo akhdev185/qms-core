@@ -69,7 +69,7 @@ export default function ProcessInteractionPage() {
       <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
       
       <div className="flex-1 md:ml-64 ml-0">
-        <Header onRefresh={refetch} />
+        <Header />
         
         <main className="p-6 space-y-6">
           {/* Page Header */}

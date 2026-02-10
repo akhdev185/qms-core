@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { addUser, users, reloadUsers } = useAuth();
   const { toast } = useToast();
 
@@ -22,28 +24,31 @@ export default function Register() {
     setIsLoading(true);
     if (!name || !email || !password || password !== confirm) {
       setIsLoading(false);
-      toast({ title: "Incomplete Data", description: "Please fill all fields and ensure passwords match", variant: "destructive" });
+      toast({ title: "بيانات ناقصة", description: "يرجى ملء جميع الحقول والتأكد من تطابق كلمة المرور", variant: "destructive" });
       return;
     }
     const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
     if (exists) {
       setIsLoading(false);
-      toast({ title: "Account Exists", description: "This email is already registered", variant: "destructive" });
+      toast({ title: "الحساب موجود", description: "هذا البريد مسجل مسبقاً", variant: "destructive" });
       return;
     }
     if (!supabase) {
       setIsLoading(false);
-      toast({ title: "Registration Failed", description: "Supabase connection not configured. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY", variant: "destructive" });
+      toast({ title: "فشل التسجيل", description: "الاتصال بقاعدة البيانات غير متاح", variant: "destructive" });
       return;
     }
     const { data: signData, error: signErr } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { display_name: name },
+      },
     });
     if (signErr || !signData?.user?.id) {
       setIsLoading(false);
-      const msg = signErr?.message || "Error creating Supabase user";
-      toast({ title: "Registration Failed", description: msg, variant: "destructive" });
+      const msg = signErr?.message || "خطأ في إنشاء الحساب";
+      toast({ title: "فشل التسجيل", description: msg, variant: "destructive" });
       return;
     }
     const id = crypto.randomUUID();
@@ -53,6 +58,7 @@ export default function Register() {
         id,
         user_id: userId,
         email,
+        display_name: name,
         is_active: false,
         last_login: new Date(0).toISOString(),
       },
@@ -60,14 +66,7 @@ export default function Register() {
     );
     if (insertErr) {
       setIsLoading(false);
-      const info = [
-        insertErr.message ? `Message: ${insertErr.message}` : "",
-        insertErr.code ? `Code: ${insertErr.code}` : "",
-        insertErr.details ? `Details: ${insertErr.details}` : "",
-        insertErr.hint ? `Hint: ${insertErr.hint}` : "",
-      ].filter(Boolean).join(" — ");
-      const desc = info || "Database configuration required. Check RLS policies and permissions";
-      toast({ title: "Registration Failed", description: desc, variant: "destructive" });
+      toast({ title: "فشل التسجيل", description: insertErr.message || "خطأ في قاعدة البيانات", variant: "destructive" });
       return;
     }
     try {
@@ -83,15 +82,25 @@ export default function Register() {
       }
     } catch { void 0; }
     await reloadUsers();
-    const { data } = await supabase.from("profiles").select("id").eq("user_id", userId).limit(1);
-    const confirmed = Array.isArray(data) && data.length > 0;
     setIsLoading(false);
-    if (!confirmed) {
-      toast({ title: "Registration Failed", description: "Database required. Please try again", variant: "destructive" });
-      return;
-    }
-    toast({ title: "Account Created", description: "You can now log in" });
+    toast({ title: "تم إنشاء الحساب", description: "يمكنك تسجيل الدخول بعد تفعيل حسابك من المسؤول" });
     navigate("/login");
+  };
+
+  const handleGoogleRegister = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (error) {
+        toast({ title: "فشل التسجيل عبر Google", description: error.message, variant: "destructive" });
+      }
+    } catch (err: unknown) {
+      toast({ title: "خطأ", description: err instanceof Error ? err.message : "حدث خطأ غير متوقع", variant: "destructive" });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   return (
@@ -110,54 +119,83 @@ export default function Register() {
               </svg>
             </div>
           </div>
-          <CardTitle className="text-2xl text-gray-900">Create Account</CardTitle>
-          <CardDescription className="text-gray-600">Join Quality Management System</CardDescription>
+          <CardTitle className="text-2xl text-gray-900">إنشاء حساب</CardTitle>
+          <CardDescription className="text-gray-600">انضم إلى نظام إدارة الجودة</CardDescription>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
+          {/* Google Sign Up */}
+          <Button
+            variant="outline"
+            className="w-full flex items-center justify-center gap-3 border-gray-300 hover:bg-gray-50 py-5"
+            onClick={handleGoogleRegister}
+            disabled={isGoogleLoading}
+          >
+            {isGoogleLoading ? (
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+            )}
+            التسجيل عبر Google
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-500">أو</span>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-gray-700">Full Name</Label>
+            <Label htmlFor="name" className="text-gray-700">الاسم الكامل</Label>
             <Input 
               id="name" 
               value={name} 
               onChange={(e) => setName(e.target.value)} 
-              placeholder="Enter your full name"
+              placeholder="أدخل اسمك الكامل"
               className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-gray-700">Email Address</Label>
+            <Label htmlFor="email" className="text-gray-700">البريد الإلكتروني</Label>
             <Input 
               id="email" 
               type="email" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
-              placeholder="Enter your email"
+              placeholder="أدخل بريدك الإلكتروني"
               className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-gray-700">Password</Label>
+            <Label htmlFor="password" className="text-gray-700">كلمة المرور</Label>
             <Input 
               id="password" 
               type="password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Create a password"
+              placeholder="أنشئ كلمة مرور"
               className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="confirm" className="text-gray-700">Confirm Password</Label>
+            <Label htmlFor="confirm" className="text-gray-700">تأكيد كلمة المرور</Label>
             <Input 
               id="confirm" 
               type="password" 
               value={confirm} 
               onChange={(e) => setConfirm(e.target.value)} 
-              placeholder="Confirm your password"
+              placeholder="أعد إدخال كلمة المرور"
               className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
             />
           </div>
@@ -172,20 +210,20 @@ export default function Register() {
             {isLoading ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Creating Account...
+                جارِ إنشاء الحساب...
               </div>
             ) : (
-              "Create Account"
+              "إنشاء حساب"
             )}
           </Button>
           
           <div className="text-center text-sm text-gray-600">
-            Already have an account?{" "}
+            لديك حساب بالفعل؟{" "}
             <button 
               onClick={() => navigate("/login")}
               className="text-indigo-600 hover:text-indigo-500 font-medium"
             >
-              Sign in here
+              سجّل دخولك هنا
             </button>
           </div>
         </CardFooter>
