@@ -1,7 +1,8 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { ProfileRow } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
 
+type ProfileRow = Tables<'profiles'>;
 type Role = "admin" | "manager" | "auditor" | "user";
 
 export type AppUser = {
@@ -288,7 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const login = React.useCallback(async (email: string, password: string) => {
+  const login = React.useCallback(async (email: string, password: string): Promise<{ ok: boolean; code: string; message: string; user?: AppUser; backend: "supabase" | "local" }> => {
     const backend: "supabase" | "local" = supabase ? "supabase" : "local";
     if (!email.trim()) {
       return { ok: false, code: "email_empty", message: "البريد الإلكتروني فارغ", backend };
@@ -359,14 +360,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: false, code: "inactive", message: "الحساب غير مفعل", backend };
       }
       supabase!.from("profiles").update({ last_login: new Date().toISOString() }).eq("user_id", authUserId)
-        .then(() => void 0)
-        .catch(() => void 0);
+        .then(() => void 0, () => void 0);
       const u: AppUser = {
         id: authUserId,
-        name: profileRow?.name || email.split("@")[0],
+        name: profileRow?.display_name || email.split("@")[0],
         email,
         password: "",
-        role,
+        role: role as Role,
         active: isActive,
         lastLoginAt,
         needsApprovalNotification: false,
@@ -430,7 +430,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: newUser.role,
           });
         } catch { void 0; }
-      }).catch(() => {
+      }, () => {
         setSupabaseDisabled(true);
       });
     }
@@ -457,7 +457,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             );
           } catch { void 0; }
         }
-      }).catch(() => void 0);
+      }, () => void 0);
     }
     if (user && user.id === id) {
       setUser({ ...user, ...updates });
@@ -471,8 +471,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       saveUsersLocal(updated);
     }
     if (supabase) {
-      supabase.from("user_roles").delete().eq("user_id", id).then(() => void 0).catch(() => void 0);
-      supabase.from("profiles").delete().eq("user_id", id).then(() => void 0).catch(() => void 0);
+      supabase.from("user_roles").delete().eq("user_id", id).then(() => void 0, () => void 0);
+      supabase.from("profiles").delete().eq("user_id", id).then(() => void 0, () => void 0);
     }
     if (user && user.id === id) {
       setUser(null);
