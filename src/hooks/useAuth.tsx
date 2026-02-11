@@ -126,6 +126,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AppUser | null>(null);
   const [supabaseDisabled, setSupabaseDisabled] = React.useState(false);
 
+  // Handle Supabase auth state changes (Google OAuth redirect)
+  React.useEffect(() => {
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
+        const authUserId = session.user.id;
+        const email = session.user.email || "";
+        // Check if profile exists
+        let profileRow: ProfileRow | null = null;
+        try {
+          const { data: profRows } = await supabase.from("profiles").select("*").eq("user_id", authUserId).limit(1);
+          const list = Array.isArray(profRows) ? (profRows as ProfileRow[]) : [];
+          if (list.length > 0) profileRow = list[0] || null;
+        } catch { void 0; }
+        // Create profile if missing (Google OAuth first login)
+        if (!profileRow) {
+          const displayName = session.user.user_metadata?.full_name || session.user.user_metadata?.display_name || email.split("@")[0];
+          await supabase.from("profiles").upsert({
+            id: crypto.randomUUID(),
+            user_id: authUserId,
+            email,
+            display_name: displayName,
+            is_active: false,
+            last_login: new Date().toISOString(),
+          }, { onConflict: "user_id" });
+          try {
+            const { data: profRows2 } = await supabase.from("profiles").select("*").eq("user_id", authUserId).limit(1);
+            const list2 = Array.isArray(profRows2) ? (profRows2 as ProfileRow[]) : [];
+            if (list2.length > 0) profileRow = list2[0] || null;
+          } catch { void 0; }
+        }
+        if (!profileRow) return;
+        const isActive = !!(profileRow.is_active ?? false);
+        if (!isActive) {
+          // Account not activated - sign out and show message
+          await supabase.auth.signOut();
+          return;
+        }
+        // Get role
+        let role = "user";
+        try {
+          const { data: rolesRows } = await supabase.from("user_roles").select("*").eq("user_id", authUserId).limit(1);
+          const rlist = Array.isArray(rolesRows) ? rolesRows : [];
+          if (rlist.length > 0 && (rlist[0] as any)?.role) {
+            role = String((rlist[0] as any).role).toLowerCase();
+          }
+        } catch { void 0; }
+        // Update last login
+        supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("user_id", authUserId).then(() => void 0, () => void 0);
+        const u: AppUser = {
+          id: authUserId,
+          name: profileRow.display_name || email.split("@")[0],
+          email,
+          password: "",
+          role: role as Role,
+          active: isActive,
+          lastLoginAt: Date.now(),
+          needsApprovalNotification: false,
+        };
+        setUsers(prev => {
+          const idx = prev.findIndex(x => x.id === u.id || x.email.toLowerCase() === u.email.toLowerCase());
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...u };
+            return copy;
+          }
+          return [...prev, u];
+        });
+        setUser(u);
+        saveSession(u.id);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   React.useEffect(() => {
     const bootstrap = async () => {
       if (supabase && !supabaseDisabled) {
@@ -181,7 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const role = roleByUserId.get(r.user_id || r.id) || "user";
           return {
             id: r.user_id || r.id,
-            name: r.name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
+            name: r.display_name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
             email: r.email || "",
             password: "",
             role,
@@ -206,6 +281,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUsers(mergedArr);
         setSupabaseDisabled(false);
+
+        // Check if there's an existing Supabase session (e.g. after page refresh)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const authUserId = session.user.id;
+          const found = mergedArr.find(x => x.id === authUserId);
+          if (found && found.active) {
+            setUser(found);
+            saveSession(found.id);
+          }
+        } else {
+          const userId = loadSession();
+          if (userId) {
+            const u = mergedArr.find(x => x.id === userId) || null;
+            setUser(u);
+          }
+        }
       } else {
         if (AUTH_LOCAL_DISABLED) {
           setUsers([]);
@@ -260,17 +352,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
     bootstrap();
-    const userId = loadSession();
-    if (userId) {
-      if (supabase) {
-        const u = users.find(x => x.id === userId) || null;
-        setUser(u);
-      } else {
-        // prefer Supabase; if it fails, keep current session state
-        const u = users.find(x => x.id === userId) || null;
-        setUser(u);
-      }
-    }
   }, []);
 
   React.useEffect(() => {
