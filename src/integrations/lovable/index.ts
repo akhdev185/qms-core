@@ -6,9 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 const lovableAuth = createLovableAuth({});
 
 function getSupabaseClient() {
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return null;
+  const url = import.meta.env.VITE_SUPABASE_URL || "https://qvbqzenpxsduhhhikbcx.supabase.co";
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2YnF6ZW5weHNkdWhoaGlrYmN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MTU4NjUsImV4cCI6MjA4NTk5MTg2NX0.QegWahbjFcbopke8fnnUbvrZa7Lrcc6WKQVWN3vDiNw";
   return createClient(url, key);
 }
 
