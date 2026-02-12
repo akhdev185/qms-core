@@ -1,6 +1,13 @@
 import * as React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as supabaseImported } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 import type { Tables } from "@/integrations/supabase/types";
+
+// Fallback: if the auto-generated client is null, create one with hardcoded public keys
+const supabase = supabaseImported ?? createClient(
+  "https://qvbqzenpxsduhhhikbcx.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2YnF6ZW5weHNkdWhoaGlrYmN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MTU4NjUsImV4cCI6MjA4NTk5MTg2NX0.QegWahbjFcbopke8fnnUbvrZa7Lrcc6WKQVWN3vDiNw"
+);
 
 type ProfileRow = Tables<'profiles'>;
 type Role = "admin" | "manager" | "auditor" | "user";
@@ -128,8 +135,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Handle Supabase auth state changes (Google OAuth redirect)
   React.useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      console.warn("[AUTH] Supabase client is NULL - auth state changes will NOT be tracked");
+      return;
+    }
+    console.log("[AUTH] Setting up onAuthStateChange listener");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[AUTH] onAuthStateChange fired:", { event, hasSession: !!session, userId: session?.user?.id, email: session?.user?.email });
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
         const authUserId = session.user.id;
         const email = session.user.email || "";
@@ -160,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!profileRow) return;
         const isActive = !!(profileRow.is_active ?? false);
         if (!isActive) {
-          // Account not activated - sign out and show message
+          console.warn("[AUTH] Account not active, signing out");
           await supabase.auth.signOut();
           return;
         }
@@ -196,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         setUser(u);
         saveSession(u.id);
+        console.log("[AUTH] User logged in via onAuthStateChange:", u.email);
       }
     });
     return () => subscription.unsubscribe();
@@ -203,6 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const bootstrap = async () => {
+      console.log("[AUTH-BOOTSTRAP] Starting bootstrap...", { hasSupabase: !!supabase, supabaseDisabled });
       if (supabase && !supabaseDisabled) {
         const selectOnce = async () => {
           const { data, error } = await supabase.from("profiles").select("*");
@@ -284,9 +298,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Check if there's an existing Supabase session (e.g. after page refresh)
         const { data: { session } } = await supabase.auth.getSession();
+        console.log("[AUTH-BOOTSTRAP] getSession result:", { hasSession: !!session, userId: session?.user?.id, email: session?.user?.email });
         if (session?.user) {
           const authUserId = session.user.id;
           const found = mergedArr.find(x => x.id === authUserId);
+          console.log("[AUTH-BOOTSTRAP] Found user in merged array:", { found: !!found, active: found?.active });
           if (found && found.active) {
             setUser(found);
             saveSession(found.id);
