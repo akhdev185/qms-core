@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isFetchingRef = React.useRef<string | null>(null);
 
   // Helper for timeouts with retry
-  const withTimeout = async <T,>(promise: any, timeoutMs: number = 15000): Promise<T> => {
+  const withTimeout = async <T,>(promise: any, timeoutMs: number = 5000): Promise<T> => {
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Timeout")), timeoutMs)
     );
