@@ -308,7 +308,7 @@ export default function AdminAccounts() {
                   <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="Enter name" className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">البريد الإلكتروني</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Email Address</Label>
                   <Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="user@example.com" className="h-9" />
                 </div>
                 <div className="space-y-1.5">
