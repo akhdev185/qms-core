@@ -434,8 +434,8 @@ export default function AdminAccounts() {
                             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 font-semibold border", roleConf.color)}>
                               {roleConf.icon} {roleConf.label}
                             </Badge>
-                            {!u.active && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-warning/30 text-warning bg-warning/10">معطل</Badge>}
-                            {user?.id === u.id && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary bg-primary/10">أنت</Badge>}
+                            {!u.active && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-warning/30 text-warning bg-warning/10">Inactive</Badge>}
+                            {user?.id === u.id && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary bg-primary/10">You</Badge>}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                         </div>
