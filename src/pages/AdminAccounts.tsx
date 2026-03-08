@@ -107,7 +107,7 @@ export default function AdminAccounts() {
           setSavingRows(prev => ({ ...prev, [u.id]: false }));
           return;
         }
-        toast({ title: "✅ تم تغيير كلمة المرور", description: `تم تحديث كلمة مرور ${u.name}.` });
+        toast({ title: "✅ Password Changed", description: `Password for ${u.name} has been updated.` });
       }
       const otherUpdates = { ...updates }; delete otherUpdates.password;
       if (Object.keys(otherUpdates).length > 0) await updateUser(u.id, otherUpdates);
