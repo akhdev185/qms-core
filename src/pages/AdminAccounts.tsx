@@ -502,7 +502,7 @@ export default function AdminAccounts() {
                               </div>
                               <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
                                 onClick={async () => {
-                                  if (window.confirm(`إرسال رابط إعادة تعيين كلمة المرور إلى ${u.email}؟`)) {
+                                  if (window.confirm(`Send password reset link to ${u.email}?`)) {
                                     setResettingPw(prev => ({ ...prev, [u.id]: true }));
                                     const res = await resetPassword(u.email);
                                     setResettingPw(prev => ({ ...prev, [u.id]: false }));
