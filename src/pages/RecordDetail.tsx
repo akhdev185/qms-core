@@ -30,7 +30,7 @@ export default function RecordDetail() {
     return () => window.removeEventListener('qms-sidebar-toggle', handleToggle as EventListener);
   }, []);
 
-  const { code } = useParams<{ code: string }>();
+  const { "*": splat } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
