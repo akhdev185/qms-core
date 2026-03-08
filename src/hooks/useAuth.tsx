@@ -236,7 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         setUser(appUser);
-        saveSession(appUser.id, appUser.role);
+        saveSession(appUser.id, appUser.role, appUser.name);
         setUsers(prev => {
           if (prev.some(u => u.id === appUser.id)) return prev;
           return [appUser, ...prev];
