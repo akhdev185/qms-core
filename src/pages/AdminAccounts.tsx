@@ -506,7 +506,7 @@ export default function AdminAccounts() {
                                     setResettingPw(prev => ({ ...prev, [u.id]: true }));
                                     const res = await resetPassword(u.email);
                                     setResettingPw(prev => ({ ...prev, [u.id]: false }));
-                                    toast({ title: res.ok ? "✅ تم الإرسال" : "❌ خطأ", description: res.message, variant: res.ok ? "default" : "destructive" });
+                                    toast({ title: res.ok ? "✅ Link Sent" : "❌ Error", description: res.message, variant: res.ok ? "default" : "destructive" });
                                   }
                                 }} disabled={resettingPw[u.id]}>
                                 {resettingPw[u.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />} إرسال رابط
