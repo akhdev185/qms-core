@@ -4,19 +4,31 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { useAuth, AppUser } from "@/hooks/useAuth";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Shield, UserPlus, KeyRound, Loader2, Save, Mail, User, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Shield, UserPlus, Loader2, Save, Mail, User, Trash2,
+  CheckCircle, XCircle, Clock, Users, KeyRound, RefreshCw, Search, MoreVertical
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
+const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
+  admin: { label: "Admin", color: "bg-destructive/10 text-destructive border-destructive/20", icon: "🛡️" },
+  manager: { label: "Manager", color: "bg-primary/10 text-primary border-primary/20", icon: "📋" },
+  auditor: { label: "Auditor", color: "bg-warning/10 text-warning-foreground border-warning/20", icon: "🔍" },
+  user: { label: "User", color: "bg-muted text-muted-foreground border-border", icon: "👤" },
+};
+
 export default function AdminAccounts() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(localStorage.getItem('sidebarCollapsed') === 'true');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState<string>("all");
 
   useEffect(() => {
     const handleToggle = (event: Event) => {
@@ -26,6 +38,7 @@ export default function AdminAccounts() {
     window.addEventListener('qms-sidebar-toggle', handleToggle as EventListener);
     return () => window.removeEventListener('qms-sidebar-toggle', handleToggle as EventListener);
   }, []);
+
   const { users, addUser, updateUser, removeUser, resetPassword, user, reloadUsers } = useAuth();
   const { toast } = useToast();
   const [activeModule, setActiveModule] = useState("admin");
@@ -37,6 +50,8 @@ export default function AdminAccounts() {
   const [resettingPw, setResettingPw] = useState<Record<string, boolean>>({});
   const [editState, setEditState] = useState<Record<string, Partial<AppUser>>>({});
   const [savingRows, setSavingRows] = useState<Record<string, boolean>>({});
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isProtectedAdmin = (u: AppUser): boolean => {
     const isSelf = user?.id === u.id;
@@ -47,6 +62,13 @@ export default function AdminAccounts() {
   useEffect(() => {
     reloadUsers();
   }, [reloadUsers]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await reloadUsers();
+    setIsRefreshing(false);
+    toast({ title: "تم التحديث", description: "تم تحديث قائمة المستخدمين." });
+  };
 
   const handleAdd = () => {
     if (!newUser.name || !newUser.email) return;
@@ -59,15 +81,13 @@ export default function AdminAccounts() {
       needsApprovalNotification: false
     });
     setNewUser({ name: "", email: "", role: "user" });
+    toast({ title: "✅ تم إنشاء الحساب", description: `تم إضافة ${newUser.name} بنجاح.` });
   };
 
   const handleRowEdit = (userId: string, field: keyof AppUser, value: any) => {
     setEditState(prev => ({
       ...prev,
-      [userId]: {
-        ...(prev[userId] || {}),
-        [field]: value
-      }
+      [userId]: { ...(prev[userId] || {}), [field]: value }
     }));
   };
 
@@ -80,7 +100,6 @@ export default function AdminAccounts() {
 
     setSavingRows(prev => ({ ...prev, [u.id]: true }));
     try {
-      // Handle password change via Edge Function
       if (updates.password && typeof updates.password === "string" && updates.password.trim().length > 0) {
         const newPassword = updates.password.trim();
         if (newPassword.length < 6) {
@@ -99,11 +118,9 @@ export default function AdminAccounts() {
           setSavingRows(prev => ({ ...prev, [u.id]: false }));
           return;
         }
-
         toast({ title: "✅ تم تغيير كلمة المرور", description: `تم تحديث كلمة مرور ${u.name} بنجاح.` });
       }
 
-      // Handle other updates (name, email, role, active)
       const otherUpdates = { ...updates };
       delete otherUpdates.password;
 
@@ -111,217 +128,406 @@ export default function AdminAccounts() {
         await updateUser(u.id, otherUpdates);
       }
 
-      toast({
-        title: "✅ تم الحفظ بنجاح",
-        description: `تم تحديث بيانات ${updates.name || u.name} في قاعدة البيانات.`,
-      });
+      toast({ title: "✅ تم الحفظ", description: `تم تحديث بيانات ${updates.name || u.name}.` });
       setEditState(prev => {
         const newState = { ...prev };
         delete newState[u.id];
         return newState;
       });
     } catch (err) {
-      toast({
-        title: "❌ خطأ في الحفظ",
-        description: "فشل تحديث البيانات في قاعدة البيانات. حاول مرة أخرى.",
-        variant: "destructive",
-      });
+      toast({ title: "❌ خطأ في الحفظ", description: "فشل تحديث البيانات. حاول مرة أخرى.", variant: "destructive" });
     } finally {
       setSavingRows(prev => ({ ...prev, [u.id]: false }));
     }
   };
+
+  const pendingUsers = users.filter(u => !u.active);
+  const activeUsers = users.filter(u => u.active);
+  const totalUsers = users.length;
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = searchQuery === "" ||
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = filterRole === "all" || u.role === filterRole;
+    return matchesSearch && matchesRole;
+  });
+
+  // Stats
+  const stats = [
+    { label: "Total Users", value: totalUsers, icon: Users, color: "text-primary" },
+    { label: "Active", value: activeUsers.length, icon: CheckCircle, color: "text-success" },
+    { label: "Pending", value: pendingUsers.length, icon: Clock, color: "text-warning" },
+    { label: "Admins", value: users.filter(u => u.role === "admin").length, icon: Shield, color: "text-destructive" },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
       <main className={`ml-0 transition-all duration-300 ${sidebarCollapsed ? "md:ml-16" : "md:ml-64"}`}>
         <Header />
-        <div className="p-8 space-y-8">
-          <div className="flex items-center gap-4 animate-fade-in group">
-            <div className="w-12 h-12 rounded-xl bg-foreground/10 flex items-center justify-center shadow-lg border border-foreground/10 transition-all group-hover:scale-110">
-              <Shield className="w-6 h-6 text-foreground" />
+        <div className="p-4 md:p-8 space-y-6 max-w-[1400px] mx-auto">
+
+          {/* Page Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                <Shield className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Accounts Administration</h1>
+                <p className="text-sm text-muted-foreground">Manage users, roles, and access control</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight font-heading">Accounts Administration</h1>
-              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">Monitor users, assign roles, and manage activation</p>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 self-start md:self-auto"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+              Refresh
+            </Button>
           </div>
 
-          <Card className="glass-card border-border/50 shadow-2xl overflow-hidden rounded-2xl relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full blur-2xl opacity-20" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="font-heading font-bold">Pending Approvals</CardTitle>
-              <CardDescription>Approve or reject new accounts</CardDescription>
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {stats.map(s => (
+              <Card key={s.label} className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-muted/50", s.color)}>
+                    <s.icon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Pending Approvals */}
+          {pendingUsers.length > 0 && (
+            <Card className="border-warning/30 bg-warning/5 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-warning" />
+                  <CardTitle className="text-lg">Pending Approvals</CardTitle>
+                  <Badge variant="outline" className="ml-2 border-warning/30 text-warning bg-warning/10">
+                    {pendingUsers.length}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {pendingUsers.map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-3 rounded-xl bg-background/80 border border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">{u.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5 rounded-lg text-xs font-semibold"
+                        onClick={() => updateUser(u.id, { active: true, needsApprovalNotification: true })}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 rounded-lg text-xs font-semibold text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          if (isProtectedAdmin(u)) return;
+                          if (window.confirm(`هل تريد حذف الحساب "${u.name}"؟`)) removeUser(u.id);
+                        }}
+                        disabled={isProtectedAdmin(u)}
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Add User */}
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg">Add New User</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="relative z-10">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 border-b border-border/50">
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Name</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Email</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.filter(u => !u.active).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground italic text-xs">No pending approvals</TableCell>
-                    </TableRow>
-                  ) : users.filter(u => !u.active).map(u => (
-                    <TableRow key={u.id} className="hover:bg-primary/5 transition-colors">
-                      <TableCell className="font-bold">{u.name}</TableCell>
-                      <TableCell className="text-sm">{u.email}</TableCell>
-                      <TableCell className="flex gap-2">
-                        <Button size="sm" className="rounded-xl h-8 text-xs font-bold" onClick={() => updateUser(u.id, { active: true, needsApprovalNotification: true })}>Approve</Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="rounded-xl h-8 text-xs font-bold"
-                          onClick={() => {
-                            if (isProtectedAdmin(u)) return;
-                            if (window.confirm(`هل تريد حذف الحساب "${u.name}"؟`)) removeUser(u.id);
-                          }}
-                          disabled={isProtectedAdmin(u)}
-                        >
-                          Reject
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Display Name</Label>
+                  <Input
+                    value={newUser.name}
+                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                    placeholder="Enter name"
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Email Address</Label>
+                  <Input
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    placeholder="user@example.com"
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Role</Label>
+                  <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v as AppUser["role"] })}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">🛡️ Admin</SelectItem>
+                      <SelectItem value="manager">📋 Manager</SelectItem>
+                      <SelectItem value="auditor">🔍 Auditor</SelectItem>
+                      <SelectItem value="user">👤 User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button className="w-full h-9 gap-2 font-semibold" onClick={handleAdd}>
+                    <UserPlus className="w-4 h-4" />
+                    Create
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="glass-card border-border/50 shadow-2xl overflow-hidden rounded-2xl relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full blur-2xl opacity-20" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-2 font-heading font-bold text-xl"><UserPlus className="w-5 h-5 text-primary" /> Add User</CardTitle>
-              <CardDescription>Create a new account and set role</CardDescription>
+          {/* Users List */}
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  <CardTitle className="text-lg">All Users</CardTitle>
+                  <Badge variant="secondary" className="ml-1">{filteredUsers.length}</Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search users..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-8 w-48 pl-9 text-sm"
+                    />
+                  </div>
+                  <Select value={filterRole} onValueChange={setFilterRole}>
+                    <SelectTrigger className="h-8 w-32 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="auditor">Auditor</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-6 relative z-10 pb-8">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Name</Label>
-                <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} className="rounded-xl h-10" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Email</Label>
-                <Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} className="rounded-xl h-10" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Role</Label>
-                <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v as AppUser["role"] })}>
-                  <SelectTrigger className="rounded-xl h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="auditor">Auditor</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <Button className="w-full rounded-xl h-10 font-bold shadow-lg shadow-primary/20" onClick={handleAdd}>Create Account</Button>
-              </div>
-            </CardContent>
-          </Card>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border/50">
+                {filteredUsers.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground text-sm">
+                    No users found matching your criteria
+                  </div>
+                ) : filteredUsers.map(u => {
+                  const rowEdit = editState[u.id] || {};
+                  const hasChanges = Object.keys(rowEdit).length > 0;
+                  const isSaving = savingRows[u.id];
+                  const isExpanded = expandedUser === u.id;
+                  const roleConf = ROLE_CONFIG[u.role] || ROLE_CONFIG.user;
+                  const currentActive = rowEdit.active !== undefined ? rowEdit.active : u.active;
 
-          <Card className="glass-card border-border/50 shadow-2xl overflow-hidden rounded-2xl relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full blur-2xl opacity-20" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="font-heading font-bold">Users List</CardTitle>
-              <CardDescription>Edit user details and save changes to database</CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 border-b border-border/50">
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">User Profile</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Role & Access</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Password Management</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Last Activity</TableHead>
-                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Operations</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map(u => {
-                    const rowEdit = editState[u.id] || {};
-                    const currentName = rowEdit.name !== undefined ? rowEdit.name : u.name;
-                    const currentEmail = rowEdit.email !== undefined ? rowEdit.email : u.email;
-                    const currentRole = rowEdit.role !== undefined ? rowEdit.role : u.role;
-                    const currentActive = rowEdit.active !== undefined ? rowEdit.active : u.active;
-                    const isSaving = savingRows[u.id];
-                    const hasChanges = Object.keys(rowEdit).length > 0;
+                  return (
+                    <div key={u.id} className={cn(
+                      "transition-colors",
+                      hasChanges && "bg-primary/[0.03]",
+                      isExpanded && "bg-muted/30"
+                    )}>
+                      {/* User Row */}
+                      <div className="flex items-center gap-3 px-4 md:px-6 py-3">
+                        {/* Avatar */}
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                          u.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        )}>
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
 
-                    return (
-                      <TableRow key={u.id} className={cn("hover:bg-primary/5 transition-colors", hasChanges ? "bg-primary/5" : "")}>
-                        <TableCell>
-                          <div className="space-y-3 min-w-[200px]">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-muted-foreground opacity-40" />
-                              <Input
-                                value={currentName}
-                                onChange={(e) => handleRowEdit(u.id, "name", e.target.value)}
-                                className="h-8 text-sm rounded-lg bg-background/50 border-border/50"
-                                placeholder="Display Name"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4 text-muted-foreground opacity-40" />
-                              <Input
-                                value={currentEmail}
-                                onChange={(e) => handleRowEdit(u.id, "email", e.target.value)}
-                                className="h-8 text-sm rounded-lg bg-background/50 border-border/50"
-                                placeholder="Email Address"
-                              />
-                            </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm truncate">{u.name}</span>
+                            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 font-semibold border", roleConf.color)}>
+                              {roleConf.icon} {roleConf.label}
+                            </Badge>
+                            {!u.active && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-warning/30 text-warning bg-warning/10">
+                                Inactive
+                              </Badge>
+                            )}
+                            {user?.id === u.id && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary bg-primary/10">
+                                You
+                              </Badge>
+                            )}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-3">
-                            <Select
-                              value={currentRole}
-                              onValueChange={(v) => handleRowEdit(u.id, "role", v as AppUser["role"])}
-                            >
-                              <SelectTrigger className="w-32 h-8 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-background/50 border-border/50">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="manager">Manager</SelectItem>
-                                <SelectItem value="auditor">Auditor</SelectItem>
-                                <SelectItem value="user">User</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground opacity-60">Status</span>
-                              <Switch
-                                checked={currentActive}
-                                onCheckedChange={(v) => handleRowEdit(u.id, "active", v)}
-                                className="scale-75"
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="password"
-                              placeholder="New password"
-                              className="w-40 h-8 text-[10px] font-mono rounded-lg bg-background/50 border-border/50"
-                              value={rowEdit.password !== undefined ? rowEdit.password : ""}
-                              onChange={(e) => handleRowEdit(u.id, "password", e.target.value)}
-                            />
-                            {!rowEdit.password && (
+                          <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                        </div>
+
+                        {/* Last Login */}
+                        <div className="hidden md:block text-right shrink-0">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Last Login</p>
+                          <p className="text-xs tabular-nums text-foreground/70">
+                            {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("en-US", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Never"}
+                          </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {hasChanges && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="h-7 px-2.5 gap-1 text-[10px] font-bold uppercase rounded-lg"
+                                onClick={() => handleSave(u)}
+                                disabled={isSaving}
+                              >
+                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                Save
+                              </Button>
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
-                                title="Send Reset Link"
+                                size="sm"
+                                className="h-7 px-2 text-[10px] text-muted-foreground"
+                                onClick={() => setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; })}
+                              >
+                                Cancel
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setExpandedUser(isExpanded ? null : u.id)}
+                          >
+                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Expanded Edit Panel */}
+                      {isExpanded && (
+                        <div className="px-4 md:px-6 pb-4 pt-1 border-t border-border/30">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-3">
+                            {/* Name */}
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <User className="w-3 h-3" /> Display Name
+                              </Label>
+                              <Input
+                                value={rowEdit.name !== undefined ? rowEdit.name : u.name}
+                                onChange={(e) => handleRowEdit(u.id, "name", e.target.value)}
+                                className="h-9 text-sm"
+                              />
+                            </div>
+
+                            {/* Email */}
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <Mail className="w-3 h-3" /> Email
+                              </Label>
+                              <Input
+                                value={rowEdit.email !== undefined ? rowEdit.email : u.email}
+                                onChange={(e) => handleRowEdit(u.id, "email", e.target.value)}
+                                className="h-9 text-sm"
+                              />
+                            </div>
+
+                            {/* Role */}
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <Shield className="w-3 h-3" /> Role
+                              </Label>
+                              <Select
+                                value={rowEdit.role !== undefined ? rowEdit.role : u.role}
+                                onValueChange={(v) => handleRowEdit(u.id, "role", v as AppUser["role"])}
+                              >
+                                <SelectTrigger className="h-9 text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">🛡️ Admin</SelectItem>
+                                  <SelectItem value="manager">📋 Manager</SelectItem>
+                                  <SelectItem value="auditor">🔍 Auditor</SelectItem>
+                                  <SelectItem value="user">👤 User</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* New Password */}
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <KeyRound className="w-3 h-3" /> New Password
+                              </Label>
+                              <Input
+                                type="password"
+                                placeholder="Enter new password"
+                                value={rowEdit.password !== undefined ? rowEdit.password : ""}
+                                onChange={(e) => handleRowEdit(u.id, "password", e.target.value)}
+                                className="h-9 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Bottom actions */}
+                          <div className="flex items-center justify-between pt-3 border-t border-border/30">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={currentActive}
+                                  onCheckedChange={(v) => handleRowEdit(u.id, "active", v)}
+                                  className="scale-90"
+                                />
+                                <span className={cn(
+                                  "text-xs font-semibold",
+                                  currentActive ? "text-success" : "text-muted-foreground"
+                                )}>
+                                  {currentActive ? "Active" : "Inactive"}
+                                </span>
+                              </div>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
                                 onClick={async () => {
-                                  if (window.confirm(`ارسال رابط تعيين كلمة المرور إلى ${u.email}؟`)) {
+                                  if (window.confirm(`إرسال رابط تعيين كلمة المرور إلى ${u.email}؟`)) {
                                     setResettingPw(prev => ({ ...prev, [u.id]: true }));
                                     const res = await resetPassword(u.email);
                                     setResettingPw(prev => ({ ...prev, [u.id]: false }));
@@ -334,74 +540,36 @@ export default function AdminAccounts() {
                                 }}
                                 disabled={resettingPw[u.id]}
                               >
-                                {resettingPw[u.id] ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Mail className="w-4 h-4 opacity-60" />
-                                )}
+                                {resettingPw[u.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                                Send Reset Link
                               </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter tabular-nums">
-                          {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("en-US", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Never"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {hasChanges && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:bg-muted"
-                                onClick={() => {
-                                  setEditState(prev => {
-                                    const newState = { ...prev };
-                                    delete newState[u.id];
-                                    return newState;
-                                  });
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant={hasChanges ? "default" : "outline"}
-                              className={cn("h-8 px-3 gap-1.5 rounded-xl transition-all", hasChanges ? "shadow-lg shadow-primary/20" : "")}
-                              onClick={() => handleSave(u)}
-                              disabled={isSaving || !hasChanges}
-                            >
-                              {isSaving ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Save className="w-3.5 h-3.5" />
-                              )}
-                              <span className="text-[10px] font-bold uppercase tracking-widest">Save</span>
-                            </Button>
+                            </div>
+
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              className="h-7 gap-1.5 text-xs text-destructive hover:bg-destructive/10"
                               onClick={() => {
                                 if (isProtectedAdmin(u)) return;
                                 if (window.confirm(`هل تريد حذف الحساب "${u.name}"؟`)) removeUser(u.id);
                               }}
-                              disabled={isProtectedAdmin(u) || isSaving}
+                              disabled={isProtectedAdmin(u)}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3 h-3" />
+                              Delete Account
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </div>
+        <Footer />
       </main>
-      <Footer />
     </div>
   );
 }
