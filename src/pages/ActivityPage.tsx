@@ -1,41 +1,45 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { useQMSData, useRecentActivity } from "@/hooks/useQMSData";
+import { useQMSData } from "@/hooks/useQMSData";
 import { QMSRecord, formatTimeAgo, getModuleForCategory } from "@/lib/googleSheets";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   FileText, CheckCircle, AlertTriangle, Clock, User, ExternalLink,
-  ArrowLeft, Activity, Filter,
+  ArrowLeft, Activity, Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-function getActivityType(record: QMSRecord): "created" | "approved" | "pending" | "issue" {
+function getActivityType(record: QMSRecord): "new" | "approved" | "pending" | "issue" | "empty" {
   const reviews = record.fileReviews || {};
   const reviewValues = Object.values(reviews) as Array<{ status?: string }>;
   const statuses = reviewValues.map(r => (r?.status || "").toLowerCase());
   const hasApproved = statuses.some(s => s === "approved" || s === "✅" || s.includes("approved"));
   const hasRejected = statuses.some(s => s === "rejected" || s.includes("invalid") || s === "❌" || s.includes("nc"));
-  const hasPending = reviewValues.length === 0 ? false : statuses.some(s => s === "" || s === "pending" || s === "pending_review" || s.includes("under"));
+  const hasPending = reviewValues.length > 0 && statuses.some(s => s === "" || s === "pending" || s === "pending_review" || s.includes("under"));
   const auditStatus = (record.auditStatus || "").toLowerCase();
+
   if (auditStatus.includes("nc") || auditStatus.includes("issue") || hasRejected) return "issue";
-  const hasRecords = (record.actualRecordCount || 0) > 0 || (record.lastSerial && record.lastSerial !== "No Files Yet");
-  if (hasRecords && (hasPending || !hasApproved)) return "pending";
   if (record.reviewed || hasApproved) return "approved";
-  return "created";
+
+  const hasFiles = (record.actualRecordCount || 0) > 0 || (record.lastSerial && record.lastSerial !== "No Files Yet");
+  if (!hasFiles) return "empty";
+  if (hasPending || reviewValues.length === 0) return "pending";
+  return "new";
 }
 
-const typeConfig = {
-  created: { icon: FileText, color: "text-info", bg: "bg-info/10", label: "New" },
-  approved: { icon: CheckCircle, color: "text-success", bg: "bg-success/10", label: "Approved" },
-  pending: { icon: Clock, color: "text-warning", bg: "bg-warning/10", label: "Pending" },
-  issue: { icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10", label: "Issue" },
+const typeConfig: Record<string, { icon: typeof FileText; color: string; bg: string; label: string }> = {
+  new:      { icon: FileText,       color: "text-info",        bg: "bg-info/10",        label: "New" },
+  approved: { icon: CheckCircle,    color: "text-success",     bg: "bg-success/10",     label: "Approved" },
+  pending:  { icon: Clock,          color: "text-warning",     bg: "bg-warning/10",     label: "Pending" },
+  issue:    { icon: AlertTriangle,  color: "text-destructive", bg: "bg-destructive/10", label: "Issue" },
+  empty:    { icon: Inbox,          color: "text-muted-foreground", bg: "bg-muted/30",  label: "No Files" },
 };
 
-type FilterType = "all" | "created" | "approved" | "pending" | "issue";
+type FilterType = "all" | "new" | "approved" | "pending" | "issue" | "empty";
 
 export default function ActivityPage() {
   const navigate = useNavigate();
@@ -52,19 +56,41 @@ export default function ActivityPage() {
   }, []);
 
   const { data: records, isLoading } = useQMSData();
-  const allActivity = useRecentActivity(records, 100);
+
+  // Sort all records by last file date, most recent first
+  const allActivity = useMemo(() => {
+    if (!records) return [];
+    return [...records].sort((a, b) => {
+      const dA = a.lastFileDate ? new Date(a.lastFileDate).getTime() : 0;
+      const dB = b.lastFileDate ? new Date(b.lastFileDate).getTime() : 0;
+      return dB - dA;
+    });
+  }, [records]);
+
+  // Count per type
+  const counts = useMemo(() => {
+    const c: Record<FilterType, number> = { all: allActivity.length, new: 0, approved: 0, pending: 0, issue: 0, empty: 0 };
+    allActivity.forEach(r => { c[getActivityType(r)]++; });
+    return c;
+  }, [allActivity]);
+
+  // Only show filters that have items
+  const visibleFilters: FilterType[] = useMemo(() => {
+    const available: FilterType[] = ["all"];
+    (["issue", "pending", "approved", "new", "empty"] as FilterType[]).forEach(f => {
+      if (counts[f] > 0) available.push(f);
+    });
+    return available;
+  }, [counts]);
+
+  // Reset filter if it becomes empty
+  useEffect(() => {
+    if (filter !== "all" && counts[filter] === 0) setFilter("all");
+  }, [counts, filter]);
 
   const filteredActivity = filter === "all"
     ? allActivity
     : allActivity.filter(r => getActivityType(r) === filter);
-
-  const counts = {
-    all: allActivity.length,
-    created: allActivity.filter(r => getActivityType(r) === "created").length,
-    approved: allActivity.filter(r => getActivityType(r) === "approved").length,
-    pending: allActivity.filter(r => getActivityType(r) === "pending").length,
-    issue: allActivity.filter(r => getActivityType(r) === "issue").length,
-  };
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -89,28 +115,35 @@ export default function ActivityPage() {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-foreground tracking-tight">Recent Activity</h1>
-                  <p className="text-xs text-muted-foreground">All record changes and updates across modules</p>
+                  <p className="text-xs text-muted-foreground">
+                    {allActivity.length} records across all modules
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Filter tabs */}
+            {/* Filter tabs — only show those with data */}
             <div className="flex items-center gap-2 flex-wrap">
-              {(["all", "approved", "pending", "issue", "created"] as FilterType[]).map(f => {
+              {visibleFilters.map(f => {
                 const config = f === "all" ? null : typeConfig[f];
+                const isActive = filter === f;
                 return (
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border",
-                      filter === f
-                        ? "bg-primary/10 text-primary border-primary/20"
+                      "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5",
+                      isActive
+                        ? f === "all"
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : cn(config?.bg, config?.color, config?.bg.replace("/10", "/20").replace("bg-", "border-"))
                         : "bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/50"
                     )}
                   >
                     {f === "all" ? "All" : config?.label}
-                    <span className="ml-1.5 text-[10px] opacity-70">{counts[f]}</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full", isActive ? "bg-background/50" : "bg-muted/50")}>
+                      {counts[f]}
+                    </span>
                   </button>
                 );
               })}
@@ -132,9 +165,9 @@ export default function ActivityPage() {
                 </div>
               ) : filteredActivity.length === 0 ? (
                 <div className="p-12 text-center">
-                  <Filter className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-muted-foreground">No activity found</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">No matching records for this filter</p>
+                  <Inbox className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">No activity yet</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Records will appear here once data is synced</p>
                 </div>
               ) : (
                 <div className="divide-y divide-border/50">
@@ -164,15 +197,19 @@ export default function ActivityPage() {
                             </div>
                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
                               <span className="font-mono text-[10px]">{record.code}</span>
-                              <span>·</span>
-                              <span>{formatTimeAgo(record.lastFileDate)}</span>
+                              {record.lastFileDate && (
+                                <>
+                                  <span>·</span>
+                                  <span>{formatTimeAgo(record.lastFileDate)}</span>
+                                </>
+                              )}
                               {record.reviewedBy && (
                                 <>
                                   <span>·</span>
                                   <span className="flex items-center gap-0.5"><User className="w-3 h-3" />{record.reviewedBy}</span>
                                 </>
                               )}
-                              {record.actualRecordCount !== undefined && (
+                              {(record.actualRecordCount ?? 0) > 0 && (
                                 <>
                                   <span>·</span>
                                   <span>{record.actualRecordCount} files</span>
