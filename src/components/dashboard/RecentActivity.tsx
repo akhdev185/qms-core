@@ -59,7 +59,7 @@ export function RecentActivity({ records, isLoading = false }: RecentActivityPro
     <div className="bg-card rounded-xl border border-border">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <h3 className="text-sm font-bold text-foreground">Recent Activity</h3>
-        <button onClick={() => navigate("/audit")} className="text-[10px] font-semibold text-primary hover:underline">
+        <button onClick={() => navigate("/activity")} className="text-[10px] font-semibold text-primary hover:underline">
           View all →
         </button>
       </div>
