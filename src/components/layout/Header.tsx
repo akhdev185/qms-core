@@ -88,7 +88,7 @@ export function Header() {
             {results.length > 0 ? (
               <>
                 <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/30 border-b border-border">
-                  تم العثور على {results.length} نتيجة
+                  {results.length} results found
                 </div>
                 {results.map((file) => (
                   <div
