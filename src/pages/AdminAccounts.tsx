@@ -183,7 +183,7 @@ export default function AdminAccounts() {
       if (u && u.active && !isProtectedAdmin(u)) await updateUser(id, { active: false });
     }
     setSelectedIds(new Set());
-    toast({ title: "تم التعطيل", description: `تم تعطيل الحسابات المحددة.` });
+    toast({ title: "Deactivated", description: "Selected accounts have been deactivated." });
   };
 
   const handleExportCSV = () => {
