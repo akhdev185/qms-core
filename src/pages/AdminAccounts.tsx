@@ -114,7 +114,7 @@ export default function AdminAccounts() {
       toast({ title: "✅ Saved", description: `${updates.name || u.name} has been updated.` });
       setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; });
     } catch {
-      toast({ title: "❌ خطأ", description: "فشل التحديث. حاول مرة أخرى.", variant: "destructive" });
+      toast({ title: "❌ Error", description: "Update failed. Please try again.", variant: "destructive" });
     } finally {
       setSavingRows(prev => ({ ...prev, [u.id]: false }));
     }
