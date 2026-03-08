@@ -325,7 +325,7 @@ export default function AdminAccounts() {
                 </div>
                 <div className="flex items-end">
                   <Button className="w-full h-9 gap-2 font-semibold" onClick={handleAdd}>
-                    <UserPlus className="w-4 h-4" /> إنشاء
+                    <UserPlus className="w-4 h-4" /> Create
                   </Button>
                 </div>
               </div>
