@@ -285,7 +285,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (cached) {
           setUser({
             id: cached.userId,
-            name: cached.role === "admin" ? "Admin" : "User",
+            name: cached.displayName || "User",
             email: "",
             password: "",
             role: cached.role,
