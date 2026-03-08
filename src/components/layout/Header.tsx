@@ -131,8 +131,8 @@ export function Header() {
             ) : searchTerm.length >= 2 && !isSearching ? (
               <div className="p-8 text-center bg-muted/10">
                 <Search className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
-                <p className="text-sm text-foreground">لا توجد نتائج</p>
-                <p className="text-xs text-muted-foreground mt-1">جرب اسم ملف أكثر تحديداً</p>
+                <p className="text-sm text-foreground">No results found</p>
+                <p className="text-xs text-muted-foreground mt-1">Try a more specific file name</p>
               </div>
             ) : null}
           </div>
