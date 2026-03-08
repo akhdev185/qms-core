@@ -450,7 +450,7 @@ export default function AdminAccounts() {
                             <>
                               <Button size="sm" className="h-7 px-2.5 gap-1 text-[10px] font-bold uppercase rounded-lg"
                                 onClick={() => handleSave(u)} disabled={isSaving}>
-                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} حفظ
+                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
                               </Button>
                               <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-muted-foreground"
                                 onClick={() => setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; })}>إلغاء</Button>
