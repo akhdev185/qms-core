@@ -11,7 +11,7 @@
 
 const API_KEY = "AIzaSyDltPnR5hhwfDrjlwi7lS78R_kDIZbQpWo";
 const SPREADSHEET_ID = "11dGB-fG2UMqsdqc182PsY-K6S_19FKc8bsZLHlic18M";
-const SHEET_NAME = "CAPA Register";
+const SHEET_NAME = "CAPA Registe";
 const SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
 
 /**
