@@ -174,7 +174,7 @@ export default function AdminAccounts() {
       if (u && !u.active) await updateUser(id, { active: true });
     }
     setSelectedIds(new Set());
-    toast({ title: "✅ تم التفعيل", description: `تم تفعيل ${selectedIds.size} حساب(ات).` });
+    toast({ title: "✅ Activated", description: `${selectedIds.size} account(s) activated.` });
   };
 
   const handleBulkDeactivate = async () => {
