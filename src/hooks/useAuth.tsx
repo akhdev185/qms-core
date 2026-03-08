@@ -123,14 +123,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isFetchingRef = React.useRef<string | null>(null);
 
   // Helper for timeouts with retry
-  const withTimeout = async <T,>(promise: any, timeoutMs: number = 15000): Promise<T> => {
+  const withTimeout = async <T,>(promise: any, timeoutMs: number = 5000): Promise<T> => {
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Timeout")), timeoutMs)
     );
     return Promise.race([promise, timeout]) as Promise<T>;
   };
 
-  const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 2, delayMs: number = 1500): Promise<T> => {
+  const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 1, delayMs: number = 1000): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
       try {
         return await fn();
@@ -280,24 +280,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        // 1. Get initial session
+        // 1. Restore from cache immediately to avoid loading spinner
+        const cached = loadSession();
+        if (cached) {
+          setUser({
+            id: cached.userId,
+            name: cached.role === "admin" ? "Admin" : "User",
+            email: "",
+            password: "",
+            role: cached.role,
+            active: true,
+          });
+          setLoading(false);
+        }
+
+        // 2. Get actual session and sync in background
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
           if (session) {
-            // If we have a cached session, stop loading immediately and sync in background
-            const cached = loadSession();
-            if (cached && cached.userId === session.user.id) {
-              setLoading(false);
-              syncUserProfile(session); // fire and forget
-            } else {
+            // Sync profile in background (non-blocking)
+            syncUserProfile(session).catch(err => {
+              console.warn("[AUTH] Background sync failed, using cache:", err.message);
+            });
+            if (!cached) {
+              // No cache - we need to wait for first sync
               await syncUserProfile(session);
-              if (mounted) setLoading(false);
             }
           } else {
             setUser(null);
             saveSession(null);
-            setLoading(false);
           }
+          if (mounted) setLoading(false);
         }
       } catch (err) {
         console.error("[AUTH] Bootstrap failed:", err);
