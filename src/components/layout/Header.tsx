@@ -71,7 +71,7 @@ export function Header() {
     <div className="relative w-full focus-within:ring-2 focus-within:ring-primary/20 rounded-lg transition-all duration-300" ref={dropdownRef}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
       <Input
-        placeholder="البحث في الملفات والمجلدات..."
+        placeholder="Search files and folders..."
         className="pl-10 bg-background/50 border-border/50 rounded-lg shadow-sm focus-visible:ring-0 focus-visible:border-primary/50 transition-all"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
@@ -88,7 +88,7 @@ export function Header() {
             {results.length > 0 ? (
               <>
                 <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/30 border-b border-border">
-                  تم العثور على {results.length} نتيجة
+                  {results.length} results found
                 </div>
                 {results.map((file) => (
                   <div
@@ -131,8 +131,8 @@ export function Header() {
             ) : searchTerm.length >= 2 && !isSearching ? (
               <div className="p-8 text-center bg-muted/10">
                 <Search className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
-                <p className="text-sm text-foreground">لا توجد نتائج</p>
-                <p className="text-xs text-muted-foreground mt-1">جرب اسم ملف أكثر تحديداً</p>
+                <p className="text-sm text-foreground">No results found</p>
+                <p className="text-xs text-muted-foreground mt-1">Try a more specific file name</p>
               </div>
             ) : null}
           </div>
