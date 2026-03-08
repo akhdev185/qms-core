@@ -279,7 +279,7 @@ export default function AdminAccounts() {
                     <div className="flex gap-2">
                       <Button size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold"
                         onClick={() => updateUser(u.id, { active: true, needsApprovalNotification: true })}>
-                        <CheckCircle className="w-3.5 h-3.5" /> موافقة
+                        <CheckCircle className="w-3.5 h-3.5" /> Approve
                       </Button>
                       <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold text-destructive hover:bg-destructive/10"
                         onClick={() => { if (!isProtectedAdmin(u) && window.confirm(`حذف "${u.name}"؟`)) removeUser(u.id); }}
