@@ -68,12 +68,12 @@ function loadSession(): { userId: string; role: Role; displayName?: string } | n
   }
 }
 
-function saveSession(userId: string | null, role?: Role) {
+function saveSession(userId: string | null, role?: Role, displayName?: string) {
   if (!userId) {
     localStorage.removeItem(SESSION_KEY);
     return;
   }
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId, role }));
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId, role, displayName }));
 }
 
 function loadActivatedEmails(): string[] {
