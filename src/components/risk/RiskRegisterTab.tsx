@@ -1,23 +1,41 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Loader2, RefreshCw } from "lucide-react";
-import {
-    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pencil, Loader2, RefreshCw, Search, X, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useRiskData } from "@/hooks/useRiskData";
 import type { Risk, RiskUpdate } from "@/lib/riskRegisterService";
 import { getRiskLevel, getRiskLevelColor } from "@/lib/riskRegisterService";
+import { cn } from "@/lib/utils";
 
 export function RiskRegisterTab() {
     const { risks, isLoading, isError, error, refetch, updateRisk, isUpdating } = useRiskData();
     const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+
+    const filteredRisks = useMemo(() => {
+        let result = risks;
+        if (search) {
+            const q = search.toLowerCase();
+            result = result.filter(r =>
+                r.riskId.toLowerCase().includes(q) ||
+                r.riskDescription.toLowerCase().includes(q) ||
+                r.processDepartment.toLowerCase().includes(q) ||
+                r.owner.toLowerCase().includes(q)
+            );
+        }
+        if (statusFilter !== "all") {
+            result = result.filter(r => r.status === statusFilter);
+        }
+        return result;
+    }, [risks, search, statusFilter]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -53,11 +71,28 @@ export function RiskRegisterTab() {
         setEditingRisk(null);
     };
 
+    const handleExportCSV = () => {
+        const headers = ["Risk ID", "Department", "Description", "Cause", "L", "I", "Score", "Level", "Action", "Owner", "Status", "Linked CAPA"];
+        const rows = filteredRisks.map(r => [
+            r.riskId, r.processDepartment, r.riskDescription, r.cause,
+            r.likelihood, r.impact, r.riskScore, getRiskLevel(r.riskScore),
+            r.actionControl, r.owner, r.status, r.linkedCAPA
+        ]);
+        const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `risk-register-${new Date().toISOString().split("T")[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-20 gap-3 text-muted-foreground">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm font-medium">Loading Risk Register from Google Sheets...</span>
+                <span className="text-sm font-medium">Loading Risk Register...</span>
             </div>
         );
     }
@@ -75,79 +110,109 @@ export function RiskRegisterTab() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center p-6 rounded-2xl bg-muted/20 border-border/50 backdrop-blur-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full blur-2xl" />
-                <div className="relative z-10">
-                    <h3 className="font-bold text-xl font-heading text-foreground">Risk Register</h3>
-                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">
-                        Live data from Google Sheets • {risks.length} risks
-                    </p>
+        <div className="space-y-4">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <Input
+                        placeholder="Search risks..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 h-9 text-sm bg-background border-border/50"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 relative z-10" onClick={() => refetch()}>
-                    <RefreshCw className="w-4 h-4" /> Refresh
-                </Button>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm bg-background border-border/50">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="Under Review">Under Review</SelectItem>
+                        <SelectItem value="Controlled">Controlled</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                    </SelectContent>
+                </Select>
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={handleExportCSV} disabled={filteredRisks.length === 0}>
+                        <Download className="w-3.5 h-3.5" /> CSV
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => refetch()}>
+                        <RefreshCw className="w-3.5 h-3.5" /> Sync
+                    </Button>
+                </div>
             </div>
 
-            <div className="rounded-xl border border-border/50 bg-card overflow-hidden shadow-xl">
+            {/* Table */}
+            <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted/30 border-b border-border/50">
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4 w-[100px]">ID</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Dept</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4 max-w-[200px]">Description</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4 text-center">Score</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Action / Control</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Owner</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Status</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4">Linked CAPA</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-4 w-[50px]"></TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[90px]">ID</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3">Dept</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 max-w-[200px]">Description</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 text-center w-[80px]">Score</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 hidden lg:table-cell">Action</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3">Owner</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[100px]">Status</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 hidden md:table-cell">CAPA</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[40px]"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {risks.length === 0 ? (
+                        {filteredRisks.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="text-center py-16 text-muted-foreground text-sm">
-                                    No risks found in the Risk Register sheet.
+                                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
+                                    {search || statusFilter !== "all" ? "No risks match your filters." : "No risks found."}
                                 </TableCell>
                             </TableRow>
-                        ) : risks.map((risk) => (
-                            <TableRow key={risk.riskId} className="hover:bg-primary/5 transition-colors border-b border-border/10">
-                                <TableCell className="font-bold font-heading">{risk.riskId}</TableCell>
-                                <TableCell className="text-sm font-medium">{risk.processDepartment}</TableCell>
+                        ) : filteredRisks.map((risk) => (
+                            <TableRow key={risk.riskId} className="hover:bg-muted/20 transition-colors border-b border-border/30">
+                                <TableCell className="font-bold text-xs font-mono">{risk.riskId}</TableCell>
+                                <TableCell className="text-xs font-medium">{risk.processDepartment}</TableCell>
                                 <TableCell className="max-w-[200px]">
-                                    <div className="font-bold text-sm truncate" title={risk.riskDescription}>{risk.riskDescription}</div>
-                                    <div className="text-[10px] text-muted-foreground truncate opacity-60" title={risk.cause}>{risk.cause}</div>
+                                    <div className="text-xs font-semibold truncate" title={risk.riskDescription}>{risk.riskDescription}</div>
+                                    <div className="text-[10px] text-muted-foreground truncate mt-0.5" title={risk.cause}>{risk.cause}</div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex flex-col items-center">
-                                        <Badge variant="outline" className={`font-bold ${getRiskLevelColor(risk.riskScore)}`}>
-                                            {risk.riskScore} • {getRiskLevel(risk.riskScore)}
-                                        </Badge>
-                                        <span className="text-[9px] text-muted-foreground font-medium">({risk.likelihood}×{risk.impact})</span>
-                                    </div>
+                                    <Badge variant="outline" className={cn("font-bold text-[10px]", getRiskLevelColor(risk.riskScore))}>
+                                        {risk.riskScore}
+                                    </Badge>
+                                    <div className="text-[8px] text-muted-foreground mt-0.5">{risk.likelihood}×{risk.impact}</div>
                                 </TableCell>
-                                <TableCell className="text-xs truncate max-w-[150px] text-muted-foreground" title={risk.actionControl}>{risk.actionControl}</TableCell>
+                                <TableCell className="text-[10px] text-muted-foreground truncate max-w-[130px] hidden lg:table-cell" title={risk.actionControl}>{risk.actionControl || "—"}</TableCell>
                                 <TableCell className="text-xs font-medium">{risk.owner}</TableCell>
                                 <TableCell>
-                                    <Badge variant={getStatusColor(risk.status) as any} className="font-bold uppercase tracking-wider text-[9px]">{risk.status}</Badge>
+                                    <Badge variant={getStatusColor(risk.status) as any} className="font-bold uppercase tracking-wider text-[8px]">{risk.status}</Badge>
                                 </TableCell>
-                                <TableCell className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">{risk.linkedCAPA || "—"}</TableCell>
+                                <TableCell className="text-[10px] text-muted-foreground font-mono hidden md:table-cell">{risk.linkedCAPA || "—"}</TableCell>
                                 <TableCell>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary transition-colors" onClick={() => handleEditClick(risk)}>
-                                        <Pencil className="w-3.5 h-3.5" />
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => handleEditClick(risk)}>
+                                        <Pencil className="w-3 h-3" />
                                     </Button>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
+                {filteredRisks.length > 0 && (
+                    <div className="px-4 py-2 border-t border-border bg-muted/20 text-[10px] text-muted-foreground">
+                        {search || statusFilter !== "all" ? `${filteredRisks.length} of ${risks.length} risks` : `${risks.length} risks total`}
+                    </div>
+                )}
             </div>
 
+            {/* Edit Dialog - kept same logic */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="font-heading font-bold text-2xl">Edit Risk {editingRisk?.riskId}</DialogTitle>
+                        <DialogTitle className="font-bold text-xl">Edit Risk {editingRisk?.riskId}</DialogTitle>
                     </DialogHeader>
                     {editingRisk && (
                         <div className="grid gap-4 py-4">
