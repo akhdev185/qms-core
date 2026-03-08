@@ -260,7 +260,7 @@ export default function AdminAccounts() {
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5 text-warning" />
-                  <CardTitle className="text-lg">طلبات معلقة</CardTitle>
+                  <CardTitle className="text-lg">Pending Approvals</CardTitle>
                   <Badge variant="outline" className="ml-2 border-warning/30 text-warning bg-warning/10">{pendingUsers.length}</Badge>
                 </div>
               </CardHeader>
