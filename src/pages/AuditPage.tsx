@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -6,10 +6,11 @@ import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { useQMSData } from "@/hooks/useQMSData";
 import { RecordsTable } from "@/components/records/RecordsTable";
+import { AuditCharts } from "@/components/audit/AuditCharts";
+import { AuditFilters } from "@/components/audit/AuditFilters";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
-  ClipboardCheck,
   RefreshCw,
   AlertCircle,
   CheckCircle,
@@ -34,6 +35,8 @@ export default function AuditPage() {
   const [activeModule, setActiveModule] = useState("quality");
   const [activeTab, setActiveTab] = useState("pending");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(localStorage.getItem('sidebarCollapsed') === 'true');
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -64,12 +67,32 @@ export default function AuditPage() {
     else if (newModuleId !== "documents") navigate(`/module/${newModuleId}`);
   };
 
-  const { pendingRecords, compliantRecords, issueRecords, overdueRecords, neverFilledRecords, stats } = useMemo(() => {
+  // All unique categories
+  const categories = useMemo(() => {
+    if (!records) return [];
+    return [...new Set(records.map(r => r.category))].filter(Boolean).sort();
+  }, [records]);
+
+  // Filtered data
+  const { pendingRecords, compliantRecords, issueRecords, overdueRecords, neverFilledRecords, stats, categoryBreakdown } = useMemo(() => {
     if (!records) return {
       pendingRecords: [], compliantRecords: [], issueRecords: [],
       overdueRecords: [], neverFilledRecords: [],
-      stats: { pending: 0, compliant: 0, issues: 0, overdue: 0, neverFilled: 0, totalTemplates: 0, filledTemplatesCount: 0 }
+      stats: { pending: 0, compliant: 0, issues: 0, overdue: 0, neverFilled: 0, totalTemplates: 0, filledTemplatesCount: 0 },
+      categoryBreakdown: [],
     };
+
+    const searchLower = search.toLowerCase();
+    const matchesSearch = (r: any) => {
+      if (!search) return true;
+      return (
+        r.code?.toLowerCase().includes(searchLower) ||
+        r.recordName?.toLowerCase().includes(searchLower) ||
+        r.category?.toLowerCase().includes(searchLower) ||
+        r.fileName?.toLowerCase().includes(searchLower)
+      );
+    };
+    const matchesCategory = (r: any) => categoryFilter === "all" || r.category === categoryFilter;
 
     const pending: any[] = [];
     const compliant: any[] = [];
@@ -85,17 +108,36 @@ export default function AuditPage() {
           fileStatus: review.status, fileComment: review.comment,
           fileReviewedBy: review.reviewedBy || record.reviewedBy || "", isAtomic: true
         };
+        if (!matchesSearch(auditItem) || !matchesCategory(auditItem)) return;
         if (review.status === 'approved') compliant.push(auditItem);
         else if (review.status === 'rejected') issuesList.push(auditItem);
         else pending.push(auditItem);
       });
     });
 
-    // Overdue records
-    const overdue = records.filter(r => r.isOverdue);
+    const filteredRecords = records.filter(r => matchesSearch(r) && matchesCategory(r));
+    const overdue = filteredRecords.filter(r => r.isOverdue);
+    const neverFilled = filteredRecords.filter(r => (r.actualRecordCount || 0) === 0);
 
-    // Never filled records (0 actual records)
-    const neverFilled = records.filter(r => (r.actualRecordCount || 0) === 0);
+    // Category breakdown for bar chart (unfiltered for full picture)
+    const catMap = new Map<string, { compliant: number; pending: number; issues: number }>();
+    records.forEach(record => {
+      const cat = record.category || "Unknown";
+      if (!catMap.has(cat)) catMap.set(cat, { compliant: 0, pending: 0, issues: 0 });
+      const entry = catMap.get(cat)!;
+      const files = record.files || [];
+      const reviews = record.fileReviews || {};
+      files.forEach(file => {
+        const review = reviews[file.id] || { status: 'pending_review' };
+        if (review.status === 'approved') entry.compliant++;
+        else if (review.status === 'rejected') entry.issues++;
+        else entry.pending++;
+      });
+    });
+    const breakdown = Array.from(catMap.entries())
+      .map(([category, data]) => ({ category: category.length > 12 ? category.slice(0, 12) + "…" : category, ...data }))
+      .sort((a, b) => (b.compliant + b.pending + b.issues) - (a.compliant + a.pending + a.issues))
+      .slice(0, 8);
 
     return {
       pendingRecords: pending, compliantRecords: compliant, issueRecords: issuesList,
@@ -105,9 +147,46 @@ export default function AuditPage() {
         overdue: overdue.length, neverFilled: neverFilled.length,
         totalTemplates: records.length,
         filledTemplatesCount: records.filter(r => (r.actualRecordCount || 0) > 0).length,
-      }
+      },
+      categoryBreakdown: breakdown,
     };
-  }, [records]);
+  }, [records, search, categoryFilter]);
+
+  // Current tab data for export
+  const currentTabData = useMemo(() => {
+    switch (activeTab) {
+      case "pending": return pendingRecords;
+      case "compliant": return compliantRecords;
+      case "issues": return issueRecords;
+      case "overdue": return overdueRecords;
+      case "never-filled": return neverFilledRecords;
+      default: return [];
+    }
+  }, [activeTab, pendingRecords, compliantRecords, issueRecords, overdueRecords, neverFilledRecords]);
+
+  const handleExportCSV = useCallback(() => {
+    if (currentTabData.length === 0) return;
+    const isAtomic = currentTabData[0]?.isAtomic;
+    const headers = isAtomic
+      ? ["Code", "Record Name", "Category", "File Name", "Status", "Reviewed By"]
+      : ["Code", "Record Name", "Category", "Description", "Last Filed", "Frequency"];
+    const rows = currentTabData.map((r: any) =>
+      isAtomic
+        ? [r.code, r.recordName, r.category, r.fileName || "", r.fileStatus || "", r.fileReviewedBy || ""]
+        : [r.code, r.recordName, r.category, r.description || "", r.lastFileDate || "", r.fillFrequency || ""]
+    );
+
+    const csvContent = [headers, ...rows].map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-${activeTab}-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [currentTabData, activeTab]);
+
+  const totalFilteredCount = pendingRecords.length + compliantRecords.length + issueRecords.length;
 
   const lastUpdated = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
@@ -129,7 +208,7 @@ export default function AuditPage() {
         <Header />
 
         <main className="flex-1">
-          <div className="max-w-[1400px] mx-auto p-6 md:p-8 space-y-6">
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 space-y-5">
             <Breadcrumbs items={[{ label: "Dashboard", path: "/" }, { label: "Audit Dashboard" }]} />
 
             {/* Header */}
@@ -195,10 +274,13 @@ export default function AuditPage() {
               ))}
             </div>
 
+            {/* Charts */}
+            <AuditCharts stats={stats} categoryBreakdown={categoryBreakdown} />
+
             {/* Compliance bar */}
             <div className="bg-card rounded-xl border border-border p-5">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-foreground">Compliance Rate</span>
+                <span className="text-sm font-semibold text-foreground">Template Population Rate</span>
                 <span className="text-2xl font-bold text-success">{complianceRate}%</span>
               </div>
               <div className="w-full bg-muted/30 rounded-full h-2 overflow-hidden">
@@ -208,6 +290,18 @@ export default function AuditPage() {
                 {stats.filledTemplatesCount} of {stats.totalTemplates} templates populated
               </p>
             </div>
+
+            {/* Filters */}
+            <AuditFilters
+              search={search}
+              onSearchChange={setSearch}
+              categoryFilter={categoryFilter}
+              onCategoryChange={setCategoryFilter}
+              categories={categories}
+              onExportCSV={handleExportCSV}
+              totalFiltered={totalFilteredCount}
+              totalAll={stats.pending + stats.compliant + stats.issues}
+            />
 
             {/* Tabs */}
             <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -279,7 +373,7 @@ export default function AuditPage() {
                                 {record.fillFrequency && (
                                   <>
                                     <span className="text-[10px] text-muted-foreground">·</span>
-                                    <span className="text-[10px] text-destructive font-semibold">Frequency: {record.fillFrequency}</span>
+                                    <span className="text-[10px] text-destructive font-semibold">Freq: {record.fillFrequency}</span>
                                   </>
                                 )}
                                 {record.lastFileDate && (
