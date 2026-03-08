@@ -223,8 +223,8 @@ export default function AdminAccounts() {
                 <Shield className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">إدارة الحسابات</h1>
-                <p className="text-sm text-muted-foreground">إدارة المستخدمين والأدوار وصلاحيات الوصول</p>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Accounts Administration</h1>
+                <p className="text-sm text-muted-foreground">Manage users, roles, and access control</p>
               </div>
             </div>
             <div className="flex gap-2 self-start md:self-auto">
