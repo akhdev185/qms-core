@@ -70,14 +70,14 @@ export default function AdminAccounts() {
     setIsRefreshing(true);
     await reloadUsers();
     setIsRefreshing(false);
-    toast({ title: "تم التحديث", description: "تم تحديث قائمة المستخدمين." });
+    toast({ title: "Refreshed", description: "User list has been updated." });
   };
 
   const handleAdd = () => {
     if (!newUser.name || !newUser.email) return;
     addUser({ name: newUser.name, email: newUser.email, role: newUser.role, password: "123456", active: user?.role === "admin", needsApprovalNotification: false });
     setNewUser({ name: "", email: "", role: "user" });
-    toast({ title: "✅ تم إنشاء الحساب", description: `تم إضافة ${newUser.name} بنجاح.` });
+    toast({ title: "✅ Account Created", description: `${newUser.name} has been added successfully.` });
   };
 
   const handleRowEdit = (userId: string, field: keyof AppUser, value: any) => {
@@ -87,7 +87,7 @@ export default function AdminAccounts() {
   const handleSave = async (u: AppUser) => {
     const updates = editState[u.id];
     if (!updates || Object.keys(updates).length === 0) {
-      toast({ title: "لا يوجد تغييرات", description: "لم يتم تعديل أي بيانات." });
+      toast({ title: "No Changes", description: "No data was modified." });
       return;
     }
     setSavingRows(prev => ({ ...prev, [u.id]: true }));
@@ -95,7 +95,7 @@ export default function AdminAccounts() {
       if (updates.password && typeof updates.password === "string" && updates.password.trim().length > 0) {
         const newPassword = updates.password.trim();
         if (newPassword.length < 6) {
-          toast({ title: "❌ خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل.", variant: "destructive" });
+          toast({ title: "❌ Error", description: "Password must be at least 6 characters.", variant: "destructive" });
           setSavingRows(prev => ({ ...prev, [u.id]: false }));
           return;
         }
@@ -103,18 +103,18 @@ export default function AdminAccounts() {
           body: { target_user_id: u.id, new_password: newPassword },
         });
         if (error || (data && data.error)) {
-          toast({ title: "❌ خطأ في تغيير كلمة المرور", description: data?.error || error?.message || "فشل", variant: "destructive" });
+          toast({ title: "❌ Password Change Failed", description: data?.error || error?.message || "Failed", variant: "destructive" });
           setSavingRows(prev => ({ ...prev, [u.id]: false }));
           return;
         }
-        toast({ title: "✅ تم تغيير كلمة المرور", description: `تم تحديث كلمة مرور ${u.name}.` });
+        toast({ title: "✅ Password Changed", description: `Password for ${u.name} has been updated.` });
       }
       const otherUpdates = { ...updates }; delete otherUpdates.password;
       if (Object.keys(otherUpdates).length > 0) await updateUser(u.id, otherUpdates);
-      toast({ title: "✅ تم الحفظ", description: `تم تحديث بيانات ${updates.name || u.name}.` });
+      toast({ title: "✅ Saved", description: `${updates.name || u.name} has been updated.` });
       setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; });
     } catch {
-      toast({ title: "❌ خطأ", description: "فشل التحديث. حاول مرة أخرى.", variant: "destructive" });
+      toast({ title: "❌ Error", description: "Update failed. Please try again.", variant: "destructive" });
     } finally {
       setSavingRows(prev => ({ ...prev, [u.id]: false }));
     }
@@ -174,7 +174,7 @@ export default function AdminAccounts() {
       if (u && !u.active) await updateUser(id, { active: true });
     }
     setSelectedIds(new Set());
-    toast({ title: "✅ تم التفعيل", description: `تم تفعيل ${selectedIds.size} حساب(ات).` });
+    toast({ title: "✅ Activated", description: `${selectedIds.size} account(s) activated.` });
   };
 
   const handleBulkDeactivate = async () => {
@@ -183,7 +183,7 @@ export default function AdminAccounts() {
       if (u && u.active && !isProtectedAdmin(u)) await updateUser(id, { active: false });
     }
     setSelectedIds(new Set());
-    toast({ title: "تم التعطيل", description: `تم تعطيل الحسابات المحددة.` });
+    toast({ title: "Deactivated", description: "Selected accounts have been deactivated." });
   };
 
   const handleExportCSV = () => {
@@ -199,14 +199,14 @@ export default function AdminAccounts() {
     const a = document.createElement("a");
     a.href = url; a.download = "users_export.csv"; a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "تم التصدير", description: `تم تصدير ${filteredUsers.length} مستخدم.` });
+    toast({ title: "Exported", description: `${filteredUsers.length} users exported.` });
   };
 
   const stats = [
-    { label: "إجمالي", value: users.length, icon: Users, color: "text-primary" },
-    { label: "نشط", value: activeUsers.length, icon: CheckCircle, color: "text-success" },
-    { label: "معلق", value: pendingUsers.length, icon: Clock, color: "text-warning" },
-    { label: "مسؤول", value: users.filter(u => u.role === "admin").length, icon: Shield, color: "text-destructive" },
+    { label: "Total", value: users.length, icon: Users, color: "text-primary" },
+    { label: "Active", value: activeUsers.length, icon: CheckCircle, color: "text-success" },
+    { label: "Pending", value: pendingUsers.length, icon: Clock, color: "text-warning" },
+    { label: "Admins", value: users.filter(u => u.role === "admin").length, icon: Shield, color: "text-destructive" },
   ];
 
   return (
@@ -223,16 +223,16 @@ export default function AdminAccounts() {
                 <Shield className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">إدارة الحسابات</h1>
-                <p className="text-sm text-muted-foreground">إدارة المستخدمين والأدوار وصلاحيات الوصول</p>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Accounts Administration</h1>
+                <p className="text-sm text-muted-foreground">Manage users, roles, and access control</p>
               </div>
             </div>
             <div className="flex gap-2 self-start md:self-auto">
               <Button variant="outline" size="sm" className="gap-2" onClick={handleExportCSV}>
-                <Download className="w-4 h-4" /> تصدير CSV
+                <Download className="w-4 h-4" /> Export CSV
               </Button>
               <Button variant="outline" size="sm" className="gap-2" onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} /> تحديث
+                <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} /> Refresh
               </Button>
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function AdminAccounts() {
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5 text-warning" />
-                  <CardTitle className="text-lg">طلبات معلقة</CardTitle>
+                  <CardTitle className="text-lg">Pending Approvals</CardTitle>
                   <Badge variant="outline" className="ml-2 border-warning/30 text-warning bg-warning/10">{pendingUsers.length}</Badge>
                 </div>
               </CardHeader>
@@ -279,12 +279,12 @@ export default function AdminAccounts() {
                     <div className="flex gap-2">
                       <Button size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold"
                         onClick={() => updateUser(u.id, { active: true, needsApprovalNotification: true })}>
-                        <CheckCircle className="w-3.5 h-3.5" /> موافقة
+                        <CheckCircle className="w-3.5 h-3.5" /> Approve
                       </Button>
                       <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold text-destructive hover:bg-destructive/10"
-                        onClick={() => { if (!isProtectedAdmin(u) && window.confirm(`حذف "${u.name}"؟`)) removeUser(u.id); }}
+                        onClick={() => { if (!isProtectedAdmin(u) && window.confirm(`Delete "${u.name}"?`)) removeUser(u.id); }}
                         disabled={isProtectedAdmin(u)}>
-                        <XCircle className="w-3.5 h-3.5" /> رفض
+                        <XCircle className="w-3.5 h-3.5" /> Reject
                       </Button>
                     </div>
                   </div>
@@ -298,21 +298,21 @@ export default function AdminAccounts() {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-primary" />
-                <CardTitle className="text-lg">إضافة مستخدم</CardTitle>
+                <CardTitle className="text-lg">Add New User</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">الاسم</Label>
-                  <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="أدخل الاسم" className="h-9" />
+                  <Label className="text-xs font-medium text-muted-foreground">Display Name</Label>
+                  <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="Enter name" className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">البريد الإلكتروني</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Email Address</Label>
                   <Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="user@example.com" className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">الدور</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Role</Label>
                   <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v as AppUser["role"] })}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -325,7 +325,7 @@ export default function AdminAccounts() {
                 </div>
                 <div className="flex items-end">
                   <Button className="w-full h-9 gap-2 font-semibold" onClick={handleAdd}>
-                    <UserPlus className="w-4 h-4" /> إنشاء
+                    <UserPlus className="w-4 h-4" /> Create
                   </Button>
                 </div>
               </div>
@@ -338,18 +338,18 @@ export default function AdminAccounts() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-lg">جميع المستخدمين</CardTitle>
+                  <CardTitle className="text-lg">All Users</CardTitle>
                   <Badge variant="secondary" className="ml-1">{filteredUsers.length}</Badge>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="relative">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input placeholder="بحث..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-8 w-40 pl-9 text-sm" />
+                    <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-8 w-40 pl-9 text-sm" />
                   </div>
                   <Select value={filterRole} onValueChange={setFilterRole}>
                     <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">كل الأدوار</SelectItem>
+                      <SelectItem value="all">All Roles</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="auditor">Auditor</SelectItem>
@@ -359,9 +359,9 @@ export default function AdminAccounts() {
                   <Select value={filterStatus} onValueChange={setFilterStatus}>
                     <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">كل الحالات</SelectItem>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="inactive">معطل</SelectItem>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -372,14 +372,14 @@ export default function AdminAccounts() {
             {selectedIds.size > 0 && (
               <div className="px-4 md:px-6 pb-3">
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                  <span className="text-sm font-semibold text-primary">{selectedIds.size} محدد</span>
+                  <span className="text-sm font-semibold text-primary">{selectedIds.size} selected</span>
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleBulkActivate}>
-                    <CheckCircle className="w-3 h-3" /> تفعيل
+                    <CheckCircle className="w-3 h-3" /> Activate
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive" onClick={handleBulkDeactivate}>
-                    <XCircle className="w-3 h-3" /> تعطيل
+                    <XCircle className="w-3 h-3" /> Deactivate
                   </Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedIds(new Set())}>إلغاء</Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedIds(new Set())}>Cancel</Button>
                 </div>
               </div>
             )}
@@ -393,23 +393,23 @@ export default function AdminAccounts() {
                 </div>
                 <div className="w-10" />
                 <button className="flex-1 flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("name")}>
-                  الاسم <SortIcon field="name" />
+                  Name <SortIcon field="name" />
                 </button>
                 <button className="w-48 flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("email")}>
-                  البريد <SortIcon field="email" />
+                  Email <SortIcon field="email" />
                 </button>
                 <button className="w-24 flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("role")}>
-                  الدور <SortIcon field="role" />
+                  Role <SortIcon field="role" />
                 </button>
                 <button className="w-28 flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort("lastLoginAt")}>
-                  آخر دخول <SortIcon field="lastLoginAt" />
+                  Last Login <SortIcon field="lastLoginAt" />
                 </button>
                 <div className="w-24" />
               </div>
 
               <div className="divide-y divide-border/50">
                 {filteredUsers.length === 0 ? (
-                  <div className="py-12 text-center text-muted-foreground text-sm">لا يوجد مستخدمون مطابقون</div>
+                  <div className="py-12 text-center text-muted-foreground text-sm">No users found matching your criteria</div>
                 ) : filteredUsers.map(u => {
                   const rowEdit = editState[u.id] || {};
                   const hasChanges = Object.keys(rowEdit).length > 0;
@@ -434,15 +434,15 @@ export default function AdminAccounts() {
                             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 font-semibold border", roleConf.color)}>
                               {roleConf.icon} {roleConf.label}
                             </Badge>
-                            {!u.active && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-warning/30 text-warning bg-warning/10">معطل</Badge>}
-                            {user?.id === u.id && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary bg-primary/10">أنت</Badge>}
+                            {!u.active && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-warning/30 text-warning bg-warning/10">Inactive</Badge>}
+                            {user?.id === u.id && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary bg-primary/10">You</Badge>}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                         </div>
                         <div className="hidden md:block text-right shrink-0 w-28">
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">آخر دخول</p>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Last Login</p>
                           <p className="text-xs tabular-nums text-foreground/70">
-                            {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("ar-SA", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "أبداً"}
+                            {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("en-US", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Never"}
                           </p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -450,10 +450,10 @@ export default function AdminAccounts() {
                             <>
                               <Button size="sm" className="h-7 px-2.5 gap-1 text-[10px] font-bold uppercase rounded-lg"
                                 onClick={() => handleSave(u)} disabled={isSaving}>
-                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} حفظ
+                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
                               </Button>
                               <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-muted-foreground"
-                                onClick={() => setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; })}>إلغاء</Button>
+                                onClick={() => setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; })}>Cancel</Button>
                             </>
                           )}
                           <Button variant="ghost" size="icon" className="h-8 w-8"
@@ -468,15 +468,15 @@ export default function AdminAccounts() {
                         <div className="px-4 md:px-6 pb-4 pt-1 border-t border-border/30">
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-3">
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="w-3 h-3" /> الاسم</Label>
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="w-3 h-3" /> Display Name</Label>
                               <Input value={rowEdit.name !== undefined ? rowEdit.name : u.name} onChange={(e) => handleRowEdit(u.id, "name", e.target.value)} className="h-9 text-sm" />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> البريد</Label>
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> Email</Label>
                               <Input value={rowEdit.email !== undefined ? rowEdit.email : u.email} onChange={(e) => handleRowEdit(u.id, "email", e.target.value)} className="h-9 text-sm" />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Shield className="w-3 h-3" /> الدور</Label>
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Shield className="w-3 h-3" /> Role</Label>
                               <Select value={rowEdit.role !== undefined ? rowEdit.role : u.role} onValueChange={(v) => handleRowEdit(u.id, "role", v as AppUser["role"])}>
                                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                                 <SelectContent>
@@ -488,8 +488,8 @@ export default function AdminAccounts() {
                               </Select>
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><KeyRound className="w-3 h-3" /> كلمة مرور جديدة</Label>
-                              <Input type="password" placeholder="أدخل كلمة مرور جديدة" value={rowEdit.password !== undefined ? rowEdit.password : ""} onChange={(e) => handleRowEdit(u.id, "password", e.target.value)} className="h-9 text-sm" />
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><KeyRound className="w-3 h-3" /> New Password</Label>
+                              <Input type="password" placeholder="Enter new password" value={rowEdit.password !== undefined ? rowEdit.password : ""} onChange={(e) => handleRowEdit(u.id, "password", e.target.value)} className="h-9 text-sm" />
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-3 border-t border-border/30">
@@ -497,25 +497,25 @@ export default function AdminAccounts() {
                               <div className="flex items-center gap-2">
                                 <Switch checked={currentActive} onCheckedChange={(v) => handleRowEdit(u.id, "active", v)} className="scale-90" />
                                 <span className={cn("text-xs font-semibold", currentActive ? "text-success" : "text-muted-foreground")}>
-                                  {currentActive ? "نشط" : "معطل"}
+                                  {currentActive ? "Active" : "Inactive"}
                                 </span>
                               </div>
                               <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
                                 onClick={async () => {
-                                  if (window.confirm(`إرسال رابط إعادة تعيين كلمة المرور إلى ${u.email}؟`)) {
+                                  if (window.confirm(`Send password reset link to ${u.email}?`)) {
                                     setResettingPw(prev => ({ ...prev, [u.id]: true }));
                                     const res = await resetPassword(u.email);
                                     setResettingPw(prev => ({ ...prev, [u.id]: false }));
-                                    toast({ title: res.ok ? "✅ تم الإرسال" : "❌ خطأ", description: res.message, variant: res.ok ? "default" : "destructive" });
+                                    toast({ title: res.ok ? "✅ Link Sent" : "❌ Error", description: res.message, variant: res.ok ? "default" : "destructive" });
                                   }
                                 }} disabled={resettingPw[u.id]}>
-                                {resettingPw[u.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />} إرسال رابط
+                                {resettingPw[u.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />} Send Reset Link
                               </Button>
                             </div>
                             <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-destructive hover:bg-destructive/10"
-                              onClick={() => { if (!isProtectedAdmin(u) && window.confirm(`حذف "${u.name}"؟`)) removeUser(u.id); }}
+                              onClick={() => { if (!isProtectedAdmin(u) && window.confirm(`Delete "${u.name}"?`)) removeUser(u.id); }}
                               disabled={isProtectedAdmin(u)}>
-                              <Trash2 className="w-3 h-3" /> حذف الحساب
+                              <Trash2 className="w-3 h-3" /> Delete Account
                             </Button>
                           </div>
                         </div>
