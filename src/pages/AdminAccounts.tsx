@@ -282,7 +282,7 @@ export default function AdminAccounts() {
                         <CheckCircle className="w-3.5 h-3.5" /> Approve
                       </Button>
                       <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold text-destructive hover:bg-destructive/10"
-                        onClick={() => { if (!isProtectedAdmin(u) && window.confirm(`حذف "${u.name}"؟`)) removeUser(u.id); }}
+                        onClick={() => { if (!isProtectedAdmin(u) && window.confirm(`Delete "${u.name}"?`)) removeUser(u.id); }}
                         disabled={isProtectedAdmin(u)}>
                         <XCircle className="w-3.5 h-3.5" /> رفض
                       </Button>
