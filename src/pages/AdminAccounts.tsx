@@ -103,7 +103,7 @@ export default function AdminAccounts() {
           body: { target_user_id: u.id, new_password: newPassword },
         });
         if (error || (data && data.error)) {
-          toast({ title: "❌ خطأ في تغيير كلمة المرور", description: data?.error || error?.message || "فشل", variant: "destructive" });
+          toast({ title: "❌ Password Change Failed", description: data?.error || error?.message || "Failed", variant: "destructive" });
           setSavingRows(prev => ({ ...prev, [u.id]: false }));
           return;
         }
