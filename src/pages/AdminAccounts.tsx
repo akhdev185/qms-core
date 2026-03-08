@@ -488,8 +488,8 @@ export default function AdminAccounts() {
                               </Select>
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><KeyRound className="w-3 h-3" /> كلمة مرور جديدة</Label>
-                              <Input type="password" placeholder="أدخل كلمة مرور جديدة" value={rowEdit.password !== undefined ? rowEdit.password : ""} onChange={(e) => handleRowEdit(u.id, "password", e.target.value)} className="h-9 text-sm" />
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><KeyRound className="w-3 h-3" /> New Password</Label>
+                              <Input type="password" placeholder="Enter new password" value={rowEdit.password !== undefined ? rowEdit.password : ""} onChange={(e) => handleRowEdit(u.id, "password", e.target.value)} className="h-9 text-sm" />
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-3 border-t border-border/30">
