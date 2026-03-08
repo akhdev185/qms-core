@@ -173,9 +173,12 @@ export default function Index() {
               {/* Modules */}
               <div className="xl:col-span-8 space-y-5">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-foreground">System Modules</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 rounded-full bg-primary" />
+                    <h2 className="text-lg font-bold text-foreground tracking-tight">System Modules</h2>
+                  </div>
                   {!isLoading && records && (
-                    <span className="text-[10px] font-semibold text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-md border border-border/50">
+                    <span className="text-[10px] font-bold text-primary bg-primary/8 px-3 py-1.5 rounded-full border border-primary/15">
                       {auditSummary.total} definitions
                     </span>
                   )}
