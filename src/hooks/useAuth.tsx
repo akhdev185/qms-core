@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("[AUTH] Using cached role optimistically:", cached.role);
       setUser({
         id: authUserId,
-        name: email.split("@")[0] || "User",
+        name: cached.displayName || email.split("@")[0] || "User",
         email: email,
         password: "",
         role: cached.role,
