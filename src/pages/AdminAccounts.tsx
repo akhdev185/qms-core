@@ -497,7 +497,7 @@ export default function AdminAccounts() {
                               <div className="flex items-center gap-2">
                                 <Switch checked={currentActive} onCheckedChange={(v) => handleRowEdit(u.id, "active", v)} className="scale-90" />
                                 <span className={cn("text-xs font-semibold", currentActive ? "text-success" : "text-muted-foreground")}>
-                                  {currentActive ? "نشط" : "معطل"}
+                                  {currentActive ? "Active" : "Inactive"}
                                 </span>
                               </div>
                               <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
