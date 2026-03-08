@@ -637,7 +637,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u = { ...found, lastLoginAt: Date.now(), needsApprovalNotification: false };
         setUsers(users.map(x => (x.id === u.id ? u : x)));
         setUser(u);
-        saveSession(u.id, u.role);
+        saveSession(u.id, u.role, u.name);
         return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend: "local" };
       }
     }
