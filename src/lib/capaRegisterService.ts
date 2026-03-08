@@ -293,7 +293,7 @@ export async function addCAPA(input: CAPAInput): Promise<CAPA> {
     input.relatedRisk || "",
   ];
   
-  const url = `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${API_KEY}`;
+  const url = `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent("'" + SHEET_NAME + "'")}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${API_KEY}`;
   
   const response = await fetch(url, {
     method: "POST",
