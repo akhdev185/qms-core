@@ -723,7 +723,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user && user.id === id) {
       const newUser = { ...user, ...updates };
       setUser(newUser);
-      saveSession(newUser.id, newUser.role);
+      saveSession(newUser.id, newUser.role, newUser.name);
     }
 
     if (supabase) {
