@@ -77,7 +77,7 @@ export default function AdminAccounts() {
     if (!newUser.name || !newUser.email) return;
     addUser({ name: newUser.name, email: newUser.email, role: newUser.role, password: "123456", active: user?.role === "admin", needsApprovalNotification: false });
     setNewUser({ name: "", email: "", role: "user" });
-    toast({ title: "✅ تم إنشاء الحساب", description: `تم إضافة ${newUser.name} بنجاح.` });
+    toast({ title: "✅ Account Created", description: `${newUser.name} has been added successfully.` });
   };
 
   const handleRowEdit = (userId: string, field: keyof AppUser, value: any) => {
