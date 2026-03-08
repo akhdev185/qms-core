@@ -304,8 +304,8 @@ export default function AdminAccounts() {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">الاسم</Label>
-                  <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="أدخل الاسم" className="h-9" />
+                  <Label className="text-xs font-medium text-muted-foreground">Display Name</Label>
+                  <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="Enter name" className="h-9" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">البريد الإلكتروني</Label>
