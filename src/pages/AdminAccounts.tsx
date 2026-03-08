@@ -472,7 +472,7 @@ export default function AdminAccounts() {
                               <Input value={rowEdit.name !== undefined ? rowEdit.name : u.name} onChange={(e) => handleRowEdit(u.id, "name", e.target.value)} className="h-9 text-sm" />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> البريد</Label>
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> Email</Label>
                               <Input value={rowEdit.email !== undefined ? rowEdit.email : u.email} onChange={(e) => handleRowEdit(u.id, "email", e.target.value)} className="h-9 text-sm" />
                             </div>
                             <div className="space-y-1.5">
