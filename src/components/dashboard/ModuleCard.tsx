@@ -1,4 +1,4 @@
-import { LucideIcon, ArrowRight, FileText, FolderOpen } from "lucide-react";
+import { LucideIcon, ArrowRight, FileText, FolderOpen, TrendingUp, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,6 +27,11 @@ const defaultColor = { bg: "bg-primary/8", text: "text-primary", border: "border
 export function ModuleCard({ title, description, icon: Icon, moduleClass, stats, isoClause, isLoading = false }: ModuleCardProps) {
   const colors = moduleColorMap[moduleClass] || defaultColor;
 
+  // Derive compliance from available data
+  const total = stats.formsCount + stats.recordsCount;
+  const issues = stats.pendingCount + stats.issuesCount;
+  const complianceRate = total > 0 ? Math.round(((total - issues) / total) * 100) : 100;
+
   if (isLoading) {
     return (
       <div className="bg-card rounded-xl border border-border p-5 space-y-3">
@@ -39,6 +44,7 @@ export function ModuleCard({ title, description, icon: Icon, moduleClass, stats,
         </div>
         <Skeleton className="h-3 w-full" />
         <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-6 w-full rounded-lg" />
       </div>
     );
   }
@@ -79,7 +85,7 @@ export function ModuleCard({ title, description, icon: Icon, moduleClass, stats,
         {/* Description */}
         <p className="text-[11px] text-muted-foreground leading-relaxed mb-4 flex-1 line-clamp-2">{description}</p>
 
-        {/* Stats */}
+        {/* Stats row */}
         <div className={cn("flex items-center gap-2 p-2.5 rounded-lg border", colors.bg, colors.border)}>
           <div className="flex items-center gap-1.5 flex-1">
             <FileText className={cn("w-3.5 h-3.5 shrink-0", colors.text, "opacity-60")} />
@@ -112,6 +118,41 @@ export function ModuleCard({ title, description, icon: Icon, moduleClass, stats,
             </>
           )}
         </div>
+
+        {/* Compliance bar */}
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              Compliance
+            </span>
+            <span className={cn("text-[10px] font-bold", complianceRate >= 80 ? "text-success" : complianceRate >= 50 ? "text-warning" : "text-destructive")}>
+              {complianceRate}%
+            </span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-muted/50 overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                complianceRate >= 80 ? "bg-success" : complianceRate >= 50 ? "bg-warning" : "bg-destructive"
+              )}
+              style={{ width: `${complianceRate}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Activity hint */}
+        {(stats.pendingCount > 0 || stats.issuesCount > 0) && (
+          <div className="mt-3 flex items-center gap-1.5 text-[9px] text-muted-foreground">
+            <Activity className="w-3 h-3" />
+            <span>
+              {stats.pendingCount > 0 && <span className="font-semibold text-warning">{stats.pendingCount} pending</span>}
+              {stats.pendingCount > 0 && stats.issuesCount > 0 && " · "}
+              {stats.issuesCount > 0 && <span className="font-semibold text-destructive">{stats.issuesCount} issues</span>}
+              {" — action needed"}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
