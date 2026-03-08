@@ -468,7 +468,7 @@ export default function AdminAccounts() {
                         <div className="px-4 md:px-6 pb-4 pt-1 border-t border-border/30">
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-3">
                             <div className="space-y-1.5">
-                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="w-3 h-3" /> الاسم</Label>
+                              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><User className="w-3 h-3" /> Display Name</Label>
                               <Input value={rowEdit.name !== undefined ? rowEdit.name : u.name} onChange={(e) => handleRowEdit(u.id, "name", e.target.value)} className="h-9 text-sm" />
                             </div>
                             <div className="space-y-1.5">
