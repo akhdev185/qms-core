@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return Promise.race([promise, timeout]) as Promise<T>;
   };
 
-  const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 2, delayMs: number = 1500): Promise<T> => {
+  const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 1, delayMs: number = 1000): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
       try {
         return await fn();
