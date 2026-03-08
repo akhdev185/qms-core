@@ -222,7 +222,7 @@ function parseCAPARow(row: string[], rowIndex: number): CAPA | null {
  * @throws Error if API request fails
  */
 export async function getAllCAPAs(): Promise<CAPA[]> {
-  const url = `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
+  const url = `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent("'" + SHEET_NAME + "'")}?key=${API_KEY}`;
   
   const response = await fetch(url);
   
