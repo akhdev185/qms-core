@@ -33,6 +33,9 @@ import {
   CheckCircle,
   RefreshCw,
   Loader2,
+  ShieldCheck,
+  TrendingUp,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -108,6 +111,9 @@ export default function Index() {
     return rejCount > 0 && rejCount >= approvedCount;
   }).length;
 
+  const totalEvidence = records?.reduce((sum, r) => sum + (r.actualRecordCount || 0), 0) || 0;
+  const gapsCount = records?.filter(r => (r.actualRecordCount || 0) === 0).length || 0;
+
   return (
     <div className="flex min-h-screen w-full bg-background">
       <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
@@ -119,34 +125,42 @@ export default function Index() {
         <Header />
 
         <main className="flex-1 overflow-auto">
-          <div className="max-w-[1400px] mx-auto p-6 md:p-8 space-y-6">
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 space-y-6">
 
-            {/* Welcome bar */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
-                <p className="text-sm text-muted-foreground">ISO 9001:2015 Quality Management System</p>
-              </div>
-              <div className="flex items-center gap-3">
-                {lastUpdated && (
-                  <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border/50">
-                    <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                    Synced {lastUpdated}
+            {/* Hero Section */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/8 via-primary/4 to-transparent border border-primary/10 p-6 md:p-8">
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldCheck className="w-5 h-5 text-primary" />
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-[0.15em]">Quality Management System</span>
                   </div>
-                )}
-                <Button onClick={handleRefresh} variant="outline" size="sm" className="h-8 gap-2" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  Sync
-                </Button>
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
+                  <p className="text-sm text-muted-foreground mt-1">ISO 9001:2015 Compliance Overview</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {lastUpdated && (
+                    <div className="hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-2 rounded-xl border border-border/50 shadow-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                      Synced {lastUpdated}
+                    </div>
+                  )}
+                  <Button onClick={handleRefresh} variant="outline" size="sm" className="h-9 gap-2 rounded-xl shadow-sm" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    Sync
+                  </Button>
+                </div>
               </div>
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
             </div>
 
-            {/* Stats row */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              <div onClick={() => navigate("/audit?tab=pending")} className="cursor-pointer">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+              <div onClick={() => navigate("/audit")} className="cursor-pointer">
                 <StatusCard
                   title="Evidence"
-                  value={records?.reduce((sum, r) => sum + (r.actualRecordCount || 0), 0) || 0}
+                  value={totalEvidence}
                   subtitle="Files collected"
                   icon={FileText}
                   variant="default"
@@ -155,32 +169,36 @@ export default function Index() {
                 />
               </div>
               <div onClick={() => navigate("/audit?tab=compliant")} className="cursor-pointer">
-                <StatusCard title="Certified" value={reviewSummary.completed} subtitle="Approved records" icon={CheckCircle} variant="success" isLoading={isLoading} />
+                <StatusCard title="Approved" value={reviewSummary.completed} subtitle="Verified records" icon={CheckCircle} variant="success" isLoading={isLoading} />
               </div>
               <div onClick={() => navigate("/audit?tab=pending")} className="cursor-pointer">
                 <StatusCard title="Pending" value={reviewSummary.pending} subtitle="Awaiting review" icon={Clock} variant="warning" isLoading={isLoading} />
               </div>
               <div onClick={() => navigate("/audit")} className="cursor-pointer">
-                <StatusCard title="Gaps" value={records?.filter(r => (r.actualRecordCount || 0) === 0).length || 0} subtitle="Empty records" icon={AlertTriangle} variant="warning" isLoading={isLoading} />
+                <StatusCard title="Gaps" value={gapsCount} subtitle="Empty records" icon={AlertTriangle} variant={gapsCount > 0 ? "warning" : "default"} isLoading={isLoading} />
               </div>
               <div onClick={() => navigate("/audit?tab=issues")} className="cursor-pointer">
-                <StatusCard title="Rejected" value={rejectedCount} subtitle="Needs attention" icon={AlertTriangle} variant="destructive" isLoading={isLoading} />
+                <StatusCard title="Rejected" value={rejectedCount} subtitle="Needs attention" icon={AlertTriangle} variant={rejectedCount > 0 ? "destructive" : "default"} isLoading={isLoading} />
               </div>
             </div>
 
-            {/* Main grid: Modules + Sidebar widgets */}
+            {/* Main Content Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-              {/* Modules */}
+              {/* Left: Modules */}
               <div className="xl:col-span-8 space-y-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-1 h-6 rounded-full bg-primary" />
-                    <h2 className="text-lg font-bold text-foreground tracking-tight">System Modules</h2>
+                    <div className="w-1.5 h-7 rounded-full bg-gradient-to-b from-primary to-primary/40" />
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground tracking-tight">System Modules</h2>
+                      <p className="text-[10px] text-muted-foreground">ISO 9001:2015 organizational structure</p>
+                    </div>
                   </div>
                   {!isLoading && records && (
-                    <span className="text-[10px] font-bold text-primary bg-primary/8 px-3 py-1.5 rounded-full border border-primary/15">
-                      {auditSummary.total} definitions
-                    </span>
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary bg-primary/8 px-3 py-1.5 rounded-full border border-primary/15">
+                      <BarChart3 className="w-3 h-3" />
+                      {auditSummary.total} templates
+                    </div>
                   )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -203,7 +221,7 @@ export default function Index() {
                 </div>
               </div>
 
-              {/* Right sidebar */}
+              {/* Right: Widgets */}
               <div className="xl:col-span-4 space-y-5">
                 <QuickActions />
                 <AuditReadiness
@@ -211,13 +229,13 @@ export default function Index() {
                   complianceRate={auditSummary.complianceRate}
                   isLoading={isLoading}
                   onRefresh={handleRefresh}
-                  emptyFormsCount={records?.filter(r => (r.actualRecordCount || 0) === 0).length || 0}
+                  emptyFormsCount={gapsCount}
                 />
                 <PendingActions records={records ?? []} isLoading={isLoading} />
               </div>
             </div>
 
-            {/* Activity & Review Pipeline */}
+            {/* Bottom: Activity & Pipeline */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <RecentActivity records={activity} isLoading={isLoading} />
 
@@ -225,11 +243,11 @@ export default function Index() {
               <div className="bg-card rounded-xl border border-border overflow-hidden">
                 <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <TrendingUp className="w-4 h-4 text-primary" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-foreground">Review Pipeline</h3>
-                    <p className="text-[10px] text-muted-foreground">Verification status</p>
+                    <p className="text-[10px] text-muted-foreground">Verification progress</p>
                   </div>
                 </div>
 
@@ -238,57 +256,42 @@ export default function Index() {
                     [1, 2, 3].map(i => <div key={i} className="h-14 bg-muted/10 animate-pulse rounded-lg" />)
                   ) : (
                     <>
-                      <div
-                        className="flex items-center justify-between p-4 rounded-lg bg-success/5 border border-success/10 cursor-pointer hover:bg-success/10 transition-colors"
-                        onClick={() => navigate("/audit?tab=compliant")}
-                      >
-                        <div className="flex items-center gap-3">
-                          <CheckCircle className="w-5 h-5 text-success" />
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">Approved</p>
-                            <p className="text-[10px] text-success/70">Verified compliant</p>
+                      {[
+                        { label: "Approved", subtitle: "Verified compliant", count: reviewSummary.completed, icon: CheckCircle, color: "success", tab: "compliant" },
+                        { label: "Pending", subtitle: "Awaiting validation", count: reviewSummary.pending, icon: Clock, color: "warning", tab: "pending" },
+                        { label: "Total Templates", subtitle: "Form definitions", count: auditSummary.total, icon: FileText, color: "muted-foreground", tab: "" },
+                      ].map(item => (
+                        <div
+                          key={item.label}
+                          className={cn(
+                            "flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.01]",
+                            item.color === "success" ? "bg-success/5 border-success/10 hover:bg-success/10" :
+                            item.color === "warning" ? "bg-warning/5 border-warning/10 hover:bg-warning/10" :
+                            "bg-muted/10 border-border/50 hover:bg-muted/20"
+                          )}
+                          onClick={() => navigate(item.tab ? `/audit?tab=${item.tab}` : "/audit")}
+                        >
+                          <div className="flex items-center gap-3">
+                            <item.icon className={cn("w-5 h-5", `text-${item.color}`)} />
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                              <p className={cn("text-[10px]", `text-${item.color}/70`)}>{item.subtitle}</p>
+                            </div>
                           </div>
+                          <span className={cn("text-2xl font-bold", `text-${item.color}`)}>{item.count}</span>
                         </div>
-                        <span className="text-2xl font-bold text-success">{reviewSummary.completed}</span>
-                      </div>
-
-                      <div
-                        className="flex items-center justify-between p-4 rounded-lg bg-warning/5 border border-warning/10 cursor-pointer hover:bg-warning/10 transition-colors"
-                        onClick={() => navigate("/audit?tab=pending")}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Clock className="w-5 h-5 text-warning" />
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">Pending</p>
-                            <p className="text-[10px] text-warning/70">Awaiting validation</p>
-                          </div>
-                        </div>
-                        <span className="text-2xl font-bold text-warning">{reviewSummary.pending}</span>
-                      </div>
-
-                      <div
-                        className="flex items-center justify-between p-4 rounded-lg bg-muted/20 border border-border/50 cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => navigate("/audit")}
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">Total Definitions</p>
-                            <p className="text-[10px] text-muted-foreground">Form templates</p>
-                          </div>
-                        </div>
-                        <span className="text-2xl font-bold text-foreground">{auditSummary.total}</span>
-                      </div>
+                      ))}
 
                       {/* Monthly velocity */}
                       <div className="flex items-center justify-between pt-3 border-t border-border/50">
                         <div className="flex items-center gap-2">
+                          <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
                           <span className="text-xs font-medium text-muted-foreground">Monthly velocity</span>
                           <span className="text-xs font-bold text-foreground">{monthlyComparison.currentMonth} records</span>
                         </div>
                         {monthlyComparison.percentageChange > 0 && (
                           <span className={cn(
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded",
+                            "text-[10px] font-bold px-2 py-0.5 rounded-md",
                             monthlyComparison.isPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
                           )}>
                             {monthlyComparison.isPositive ? "+" : "-"}{monthlyComparison.percentageChange}%
