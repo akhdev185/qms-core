@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Plus, ClipboardCheck, AlertTriangle, Upload } from "lucide-react";
+import { Plus, ClipboardCheck, AlertTriangle, Upload, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
