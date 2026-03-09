@@ -11,7 +11,7 @@ import { formatTimeAgo } from "@/lib/googleSheets";
 import { EditMetadataModal } from "./EditMetadataModal";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotifications, getAdminUserIds } from "@/hooks/useNotifications";
 
 interface RecordBrowserProps {
     record: QMSRecord;
