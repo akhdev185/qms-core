@@ -151,14 +151,10 @@ export function RiskRegisterTab() {
 
     const handleSubmitLinkCAPA = () => {
         if (!linkSourceRisk || !selectedCAPAId) return;
-        // Update risk with linked CAPA
         updateRisk({
             riskId: linkSourceRisk.riskId,
             updates: { linkedCAPA: selectedCAPAId },
         });
-        // Update CAPA with related risk
-        const { updateCAPA } = useCAPAActions();
-        // We'll handle this via the hook
         setIsLinkCAPAOpen(false);
         setLinkSourceRisk(null);
     };
