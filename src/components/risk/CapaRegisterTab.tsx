@@ -6,19 +6,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Loader2, RefreshCw, Search, X, Download, AlertTriangle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Pencil, Loader2, RefreshCw, Search, X, Download, AlertTriangle, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useCAPAData } from "@/hooks/useCAPAData";
+import { useRiskData } from "@/hooks/useRiskData";
 import type { CAPA, CAPAUpdate } from "@/lib/capaRegisterService";
 import { getCAPAStatusColor } from "@/lib/capaRegisterService";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 export function CapaRegisterTab() {
     const { capas, isLoading, isError, error, refetch, updateCAPA, isUpdating } = useCAPAData();
+    const { risks, updateRisk } = useRiskData();
+    const navigate = useNavigate();
     const [editingCapa, setEditingCapa] = useState<CAPA | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+
+    // Close CAPA confirmation
+    const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
+    const [closingCapa, setClosingCapa] = useState<CAPA | null>(null);
 
     const filteredCapas = useMemo(() => {
         let result = capas;
@@ -27,7 +35,8 @@ export function CapaRegisterTab() {
             result = result.filter(c =>
                 c.capaId.toLowerCase().includes(q) ||
                 c.description.toLowerCase().includes(q) ||
-                c.responsiblePerson.toLowerCase().includes(q)
+                c.responsiblePerson.toLowerCase().includes(q) ||
+                c.relatedRisk.toLowerCase().includes(q)
             );
         }
         if (statusFilter !== "all") {
@@ -42,6 +51,11 @@ export function CapaRegisterTab() {
         return new Date(capa.targetCompletionDate) < new Date();
     };
 
+    const getLinkedRisk = (relatedRisk: string) => {
+        if (!relatedRisk) return null;
+        return risks.find(r => r.riskId === relatedRisk);
+    };
+
     const handleEditClick = (capa: CAPA) => {
         setEditingCapa({ ...capa });
         setIsEditOpen(true);
@@ -49,8 +63,10 @@ export function CapaRegisterTab() {
 
     const handleSave = () => {
         if (!editingCapa) return;
-        // Validate closure rules
-        if (editingCapa.status === "Closed") {
+
+        // If closing, show confirmation dialog
+        const originalCapa = capas.find(c => c.capaId === editingCapa.capaId);
+        if (editingCapa.status === "Closed" && originalCapa?.status !== "Closed") {
             if (!editingCapa.rootCauseAnalysis) {
                 alert("Cannot close CAPA without Root Cause Analysis.");
                 return;
@@ -63,24 +79,50 @@ export function CapaRegisterTab() {
                 alert("Cannot close CAPA without Closure Approval.");
                 return;
             }
+            // Show confirmation if there's a linked risk
+            if (editingCapa.relatedRisk) {
+                setClosingCapa(editingCapa);
+                setIsCloseConfirmOpen(true);
+                return;
+            }
         }
+
+        submitCAPAUpdate(editingCapa);
+    };
+
+    const submitCAPAUpdate = (capa: CAPA, updateLinkedRisk: boolean = false) => {
         const updates: CAPAUpdate = {
-            sourceOfCAPA: editingCapa.sourceOfCAPA,
-            type: editingCapa.type,
-            description: editingCapa.description,
-            reference: editingCapa.reference,
-            rootCauseAnalysis: editingCapa.rootCauseAnalysis,
-            correctiveAction: editingCapa.correctiveAction,
-            preventiveAction: editingCapa.preventiveAction,
-            responsiblePerson: editingCapa.responsiblePerson,
-            targetCompletionDate: editingCapa.targetCompletionDate,
-            status: editingCapa.status,
-            effectivenessCheck: editingCapa.effectivenessCheck,
-            effectivenessReviewDate: editingCapa.effectivenessReviewDate,
-            closureApproval: editingCapa.closureApproval,
-            relatedRisk: editingCapa.relatedRisk,
+            sourceOfCAPA: capa.sourceOfCAPA,
+            type: capa.type,
+            description: capa.description,
+            reference: capa.reference,
+            rootCauseAnalysis: capa.rootCauseAnalysis,
+            correctiveAction: capa.correctiveAction,
+            preventiveAction: capa.preventiveAction,
+            responsiblePerson: capa.responsiblePerson,
+            targetCompletionDate: capa.targetCompletionDate,
+            status: capa.status,
+            effectivenessCheck: capa.effectivenessCheck,
+            effectivenessReviewDate: capa.effectivenessReviewDate,
+            closureApproval: capa.closureApproval,
+            relatedRisk: capa.relatedRisk,
         };
-        updateCAPA({ capaId: editingCapa.capaId, updates });
+        updateCAPA({ capaId: capa.capaId, updates });
+
+        // If closing and linked risk, update the risk status to "Controlled"
+        if (updateLinkedRisk && capa.status === "Closed" && capa.relatedRisk) {
+            const linkedRisk = risks.find(r => r.riskId === capa.relatedRisk);
+            if (linkedRisk && linkedRisk.status !== "Closed") {
+                updateRisk({
+                    riskId: linkedRisk.riskId,
+                    updates: {
+                        status: "Controlled",
+                        reviewDate: new Date().toISOString().split("T")[0],
+                    },
+                });
+            }
+        }
+
         setIsEditOpen(false);
         setEditingCapa(null);
     };
@@ -175,61 +217,83 @@ export function CapaRegisterTab() {
                             <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3">Responsible</TableHead>
                             <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[90px]">Target</TableHead>
                             <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[110px]">Status</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 hidden md:table-cell w-[120px]">Risk</TableHead>
                             <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[40px]"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredCapas.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
                                     {search || statusFilter !== "all" ? "No CAPAs match your filters." : "No CAPA records found."}
                                 </TableCell>
                             </TableRow>
-                        ) : filteredCapas.map((capa) => (
-                            <TableRow
-                                key={capa.capaId}
-                                className={cn(
-                                    "hover:bg-muted/20 transition-colors border-b border-border/30",
-                                    isOverdue(capa) && "bg-destructive/5"
-                                )}
-                            >
-                                <TableCell className="font-bold text-xs font-mono">
-                                    <div className="flex items-center gap-1.5">
-                                        {capa.capaId}
-                                        {isOverdue(capa) && <AlertTriangle className="w-3 h-3 text-destructive" />}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant={capa.type === "Corrective" ? "destructive" : "secondary"} className="text-[8px] font-bold uppercase">
-                                        {capa.type === "Corrective" ? "CA" : "PA"}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="max-w-[220px]">
-                                    <div className="text-xs font-semibold truncate">{capa.description}</div>
-                                    {capa.rootCauseAnalysis && (
-                                        <div className="text-[10px] text-muted-foreground truncate mt-0.5">RC: {capa.rootCauseAnalysis}</div>
+                        ) : filteredCapas.map((capa) => {
+                            const linkedRisk = getLinkedRisk(capa.relatedRisk);
+                            return (
+                                <TableRow
+                                    key={capa.capaId}
+                                    className={cn(
+                                        "hover:bg-muted/20 transition-colors border-b border-border/30",
+                                        isOverdue(capa) && "bg-destructive/5"
                                     )}
-                                </TableCell>
-                                <TableCell className="hidden lg:table-cell max-w-[180px]">
-                                    {capa.correctiveAction && <div className="text-[10px] text-muted-foreground truncate"><span className="font-bold text-foreground">CA:</span> {capa.correctiveAction}</div>}
-                                    {capa.preventiveAction && <div className="text-[10px] text-muted-foreground truncate mt-0.5"><span className="font-bold text-foreground">PA:</span> {capa.preventiveAction}</div>}
-                                </TableCell>
-                                <TableCell className="text-xs font-medium">{capa.responsiblePerson}</TableCell>
-                                <TableCell className={cn("text-xs font-medium", isOverdue(capa) ? "text-destructive" : "text-muted-foreground")}>
-                                    {capa.targetCompletionDate || "—"}
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="outline" className={cn("font-bold uppercase tracking-wider text-[8px]", getCAPAStatusColor(capa.status))}>
-                                        {capa.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => handleEditClick(capa)}>
-                                        <Pencil className="w-3 h-3" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                                >
+                                    <TableCell className="font-bold text-xs font-mono">
+                                        <div className="flex items-center gap-1.5">
+                                            {capa.capaId}
+                                            {isOverdue(capa) && <AlertTriangle className="w-3 h-3 text-destructive" />}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={capa.type === "Corrective" ? "destructive" : "secondary"} className="text-[8px] font-bold uppercase">
+                                            {capa.type === "Corrective" ? "CA" : "PA"}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="max-w-[220px]">
+                                        <div className="text-xs font-semibold truncate">{capa.description}</div>
+                                        {capa.rootCauseAnalysis && (
+                                            <div className="text-[10px] text-muted-foreground truncate mt-0.5">RC: {capa.rootCauseAnalysis}</div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="hidden lg:table-cell max-w-[180px]">
+                                        {capa.correctiveAction && <div className="text-[10px] text-muted-foreground truncate"><span className="font-bold text-foreground">CA:</span> {capa.correctiveAction}</div>}
+                                        {capa.preventiveAction && <div className="text-[10px] text-muted-foreground truncate mt-0.5"><span className="font-bold text-foreground">PA:</span> {capa.preventiveAction}</div>}
+                                    </TableCell>
+                                    <TableCell className="text-xs font-medium">{capa.responsiblePerson}</TableCell>
+                                    <TableCell className={cn("text-xs font-medium", isOverdue(capa) ? "text-destructive" : "text-muted-foreground")}>
+                                        {capa.targetCompletionDate || "—"}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className={cn("font-bold uppercase tracking-wider text-[8px]", getCAPAStatusColor(capa.status))}>
+                                            {capa.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        {linkedRisk ? (
+                                            <button
+                                                onClick={() => navigate(`/risk-management?tab=risk`)}
+                                                className="flex items-center gap-1 group"
+                                            >
+                                                <span className="text-[10px] font-mono font-bold text-primary group-hover:underline">{linkedRisk.riskId}</span>
+                                                <Badge variant="outline" className={cn("text-[7px] font-bold", getRiskBadgeColor(linkedRisk.status))}>
+                                                    {linkedRisk.status}
+                                                </Badge>
+                                                <ExternalLink className="w-2.5 h-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
+                                        ) : capa.relatedRisk ? (
+                                            <span className="text-[10px] font-mono text-muted-foreground">{capa.relatedRisk}</span>
+                                        ) : (
+                                            <span className="text-[10px] text-muted-foreground">—</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => handleEditClick(capa)}>
+                                            <Pencil className="w-3 h-3" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
                 {filteredCapas.length > 0 && (
@@ -338,7 +402,28 @@ export function CapaRegisterTab() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Related Risk</Label>
-                                <Input value={editingCapa.relatedRisk} onChange={(e) => setEditingCapa({ ...editingCapa, relatedRisk: e.target.value })} />
+                                <Select
+                                    value={editingCapa.relatedRisk || "none"}
+                                    onValueChange={(val) => setEditingCapa({ ...editingCapa, relatedRisk: val === "none" ? "" : val })}
+                                >
+                                    <SelectTrigger><SelectValue placeholder="Select Risk..." /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">— None —</SelectItem>
+                                        {risks.map(r => (
+                                            <SelectItem key={r.riskId} value={r.riskId}>
+                                                {r.riskId} — {r.riskDescription?.substring(0, 40)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {editingCapa.relatedRisk && (() => {
+                                    const lr = risks.find(r => r.riskId === editingCapa.relatedRisk);
+                                    return lr ? (
+                                        <div className="text-[10px] text-muted-foreground mt-1 p-2 rounded bg-muted/30 border border-border/30">
+                                            <span className="font-bold">{lr.riskId}</span> — {lr.riskDescription?.substring(0, 60)} — Status: <Badge variant="outline" className={cn("text-[7px]", getRiskBadgeColor(lr.status))}>{lr.status}</Badge>
+                                        </div>
+                                    ) : null;
+                                })()}
                             </div>
                         </div>
                     )}
@@ -351,6 +436,61 @@ export function CapaRegisterTab() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Close CAPA Confirmation with Risk Update */}
+            <Dialog open={isCloseConfirmOpen} onOpenChange={setIsCloseConfirmOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="font-bold text-lg flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            Close CAPA & Update Risk?
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            This CAPA is linked to <span className="font-bold">{closingCapa?.relatedRisk}</span>. 
+                            Would you like to update the linked risk status to "Controlled" as well?
+                        </DialogDescription>
+                    </DialogHeader>
+                    {closingCapa?.relatedRisk && (() => {
+                        const lr = risks.find(r => r.riskId === closingCapa.relatedRisk);
+                        return lr ? (
+                            <div className="p-3 rounded-lg bg-muted/30 border border-border/30 space-y-1 text-xs">
+                                <div className="font-bold">{lr.riskId} — {lr.riskDescription}</div>
+                                <div className="text-muted-foreground">Current Status: <Badge variant="outline" className={cn("text-[7px]", getRiskBadgeColor(lr.status))}>{lr.status}</Badge></div>
+                                <div className="text-muted-foreground mt-1">→ Will be updated to: <Badge variant="outline" className="text-[7px] text-green-600 bg-green-100">Controlled</Badge></div>
+                            </div>
+                        ) : null;
+                    })()}
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => {
+                            // Close CAPA without updating risk
+                            if (closingCapa) submitCAPAUpdate(closingCapa, false);
+                            setIsCloseConfirmOpen(false);
+                            setClosingCapa(null);
+                        }}>
+                            Close CAPA Only
+                        </Button>
+                        <Button onClick={() => {
+                            // Close CAPA and update risk
+                            if (closingCapa) submitCAPAUpdate(closingCapa, true);
+                            setIsCloseConfirmOpen(false);
+                            setClosingCapa(null);
+                        }} className="gap-2 bg-green-600 hover:bg-green-700">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Close CAPA & Update Risk
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
+}
+
+function getRiskBadgeColor(status: string): string {
+    switch (status) {
+        case "Open": return "text-red-600 bg-red-100";
+        case "Under Review": return "text-yellow-600 bg-yellow-100";
+        case "Controlled": return "text-blue-600 bg-blue-100";
+        case "Closed": return "text-green-600 bg-green-100";
+        default: return "";
+    }
 }

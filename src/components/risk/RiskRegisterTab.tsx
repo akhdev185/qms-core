@@ -6,19 +6,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Loader2, RefreshCw, Search, X, Download } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Pencil, Loader2, RefreshCw, Search, X, Download, Plus, Link2, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useRiskData } from "@/hooks/useRiskData";
+import { useCAPAData } from "@/hooks/useCAPAData";
 import type { Risk, RiskUpdate } from "@/lib/riskRegisterService";
 import { getRiskLevel, getRiskLevelColor } from "@/lib/riskRegisterService";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 export function RiskRegisterTab() {
     const { risks, isLoading, isError, error, refetch, updateRisk, isUpdating } = useRiskData();
+    const { capas, addCAPA, isAdding: isAddingCAPA } = useCAPAData();
+    const navigate = useNavigate();
     const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+
+    // Create CAPA from Risk dialog
+    const [isCreateCAPAOpen, setIsCreateCAPAOpen] = useState(false);
+    const [capaSourceRisk, setCAPASourceRisk] = useState<Risk | null>(null);
+    const [newCAPAData, setNewCAPAData] = useState({
+        type: "Corrective" as "Corrective" | "Preventive",
+        description: "",
+        rootCauseAnalysis: "",
+        correctiveAction: "",
+        preventiveAction: "",
+        responsiblePerson: "",
+        targetCompletionDate: "",
+    });
+
+    // Link existing CAPA dialog
+    const [isLinkCAPAOpen, setIsLinkCAPAOpen] = useState(false);
+    const [linkSourceRisk, setLinkSourceRisk] = useState<Risk | null>(null);
+    const [selectedCAPAId, setSelectedCAPAId] = useState("");
 
     const filteredRisks = useMemo(() => {
         let result = risks;
@@ -37,6 +59,10 @@ export function RiskRegisterTab() {
         return result;
     }, [risks, search, statusFilter]);
 
+    const unlinkedCAPAs = useMemo(() => {
+        return capas.filter(c => !c.relatedRisk || c.relatedRisk.trim() === "");
+    }, [capas]);
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case "Controlled": return "default";
@@ -45,6 +71,12 @@ export function RiskRegisterTab() {
             case "Closed": return "outline";
             default: return "outline";
         }
+    };
+
+    const getLinkedCAPAStatus = (linkedCAPA: string) => {
+        if (!linkedCAPA) return null;
+        const capa = capas.find(c => c.capaId === linkedCAPA);
+        return capa;
     };
 
     const handleEditClick = (risk: Risk) => {
@@ -71,6 +103,66 @@ export function RiskRegisterTab() {
         setEditingRisk(null);
     };
 
+    const handleCreateCAPAForRisk = (risk: Risk) => {
+        setCAPASourceRisk(risk);
+        setNewCAPAData({
+            type: "Corrective",
+            description: `CAPA for Risk: ${risk.riskDescription}`,
+            rootCauseAnalysis: risk.cause || "",
+            correctiveAction: risk.actionControl || "",
+            preventiveAction: "",
+            responsiblePerson: risk.owner || "",
+            targetCompletionDate: "",
+        });
+        setIsCreateCAPAOpen(true);
+    };
+
+    const handleSubmitCreateCAPA = () => {
+        if (!capaSourceRisk) return;
+        addCAPA({
+            sourceOfCAPA: "Risk Register",
+            type: newCAPAData.type,
+            description: newCAPAData.description,
+            reference: capaSourceRisk.riskId,
+            rootCauseAnalysis: newCAPAData.rootCauseAnalysis,
+            correctiveAction: newCAPAData.correctiveAction,
+            preventiveAction: newCAPAData.preventiveAction,
+            responsiblePerson: newCAPAData.responsiblePerson,
+            targetCompletionDate: newCAPAData.targetCompletionDate,
+            relatedRisk: capaSourceRisk.riskId,
+        }, {
+            onSuccess: (newCAPA) => {
+                // Update risk with linked CAPA
+                updateRisk({
+                    riskId: capaSourceRisk.riskId,
+                    updates: { linkedCAPA: newCAPA.capaId },
+                });
+                setIsCreateCAPAOpen(false);
+                setCAPASourceRisk(null);
+            }
+        });
+    };
+
+    const handleLinkCAPAToRisk = (risk: Risk) => {
+        setLinkSourceRisk(risk);
+        setSelectedCAPAId("");
+        setIsLinkCAPAOpen(true);
+    };
+
+    const handleSubmitLinkCAPA = () => {
+        if (!linkSourceRisk || !selectedCAPAId) return;
+        // Update risk with linked CAPA
+        updateRisk({
+            riskId: linkSourceRisk.riskId,
+            updates: { linkedCAPA: selectedCAPAId },
+        });
+        // Update CAPA with related risk
+        const { updateCAPA } = useCAPAActions();
+        // We'll handle this via the hook
+        setIsLinkCAPAOpen(false);
+        setLinkSourceRisk(null);
+    };
+
     const handleExportCSV = () => {
         const headers = ["Risk ID", "Department", "Description", "Cause", "L", "I", "Score", "Level", "Action", "Owner", "Status", "Linked CAPA"];
         const rows = filteredRisks.map(r => [
@@ -86,6 +178,10 @@ export function RiskRegisterTab() {
         a.download = `risk-register-${new Date().toISOString().split("T")[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
+    };
+
+    const navigateToCAPA = (capaId: string) => {
+        navigate(`/risk-management?tab=capa`);
     };
 
     if (isLoading) {
@@ -161,8 +257,8 @@ export function RiskRegisterTab() {
                             <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 hidden lg:table-cell">Action</TableHead>
                             <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3">Owner</TableHead>
                             <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[100px]">Status</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 hidden md:table-cell">CAPA</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[40px]"></TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 hidden md:table-cell w-[150px]">CAPA</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-3 w-[100px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -172,33 +268,63 @@ export function RiskRegisterTab() {
                                     {search || statusFilter !== "all" ? "No risks match your filters." : "No risks found."}
                                 </TableCell>
                             </TableRow>
-                        ) : filteredRisks.map((risk) => (
-                            <TableRow key={risk.riskId} className="hover:bg-muted/20 transition-colors border-b border-border/30">
-                                <TableCell className="font-bold text-xs font-mono">{risk.riskId}</TableCell>
-                                <TableCell className="text-xs font-medium">{risk.processDepartment}</TableCell>
-                                <TableCell className="max-w-[200px]">
-                                    <div className="text-xs font-semibold truncate" title={risk.riskDescription}>{risk.riskDescription}</div>
-                                    <div className="text-[10px] text-muted-foreground truncate mt-0.5" title={risk.cause}>{risk.cause}</div>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                    <Badge variant="outline" className={cn("font-bold text-[10px]", getRiskLevelColor(risk.riskScore))}>
-                                        {risk.riskScore}
-                                    </Badge>
-                                    <div className="text-[8px] text-muted-foreground mt-0.5">{risk.likelihood}×{risk.impact}</div>
-                                </TableCell>
-                                <TableCell className="text-[10px] text-muted-foreground truncate max-w-[130px] hidden lg:table-cell" title={risk.actionControl}>{risk.actionControl || "—"}</TableCell>
-                                <TableCell className="text-xs font-medium">{risk.owner}</TableCell>
-                                <TableCell>
-                                    <Badge variant={getStatusColor(risk.status) as any} className="font-bold uppercase tracking-wider text-[8px]">{risk.status}</Badge>
-                                </TableCell>
-                                <TableCell className="text-[10px] text-muted-foreground font-mono hidden md:table-cell">{risk.linkedCAPA || "—"}</TableCell>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => handleEditClick(risk)}>
-                                        <Pencil className="w-3 h-3" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                        ) : filteredRisks.map((risk) => {
+                            const linkedCapa = getLinkedCAPAStatus(risk.linkedCAPA);
+                            return (
+                                <TableRow key={risk.riskId} className="hover:bg-muted/20 transition-colors border-b border-border/30">
+                                    <TableCell className="font-bold text-xs font-mono">{risk.riskId}</TableCell>
+                                    <TableCell className="text-xs font-medium">{risk.processDepartment}</TableCell>
+                                    <TableCell className="max-w-[200px]">
+                                        <div className="text-xs font-semibold truncate" title={risk.riskDescription}>{risk.riskDescription}</div>
+                                        <div className="text-[10px] text-muted-foreground truncate mt-0.5" title={risk.cause}>{risk.cause}</div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge variant="outline" className={cn("font-bold text-[10px]", getRiskLevelColor(risk.riskScore))}>
+                                            {risk.riskScore}
+                                        </Badge>
+                                        <div className="text-[8px] text-muted-foreground mt-0.5">{risk.likelihood}×{risk.impact}</div>
+                                    </TableCell>
+                                    <TableCell className="text-[10px] text-muted-foreground truncate max-w-[130px] hidden lg:table-cell" title={risk.actionControl}>{risk.actionControl || "—"}</TableCell>
+                                    <TableCell className="text-xs font-medium">{risk.owner}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={getStatusColor(risk.status) as any} className="font-bold uppercase tracking-wider text-[8px]">{risk.status}</Badge>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        {linkedCapa ? (
+                                            <button
+                                                onClick={() => navigateToCAPA(linkedCapa.capaId)}
+                                                className="flex items-center gap-1 group"
+                                            >
+                                                <span className="text-[10px] font-mono font-bold text-primary group-hover:underline">{linkedCapa.capaId}</span>
+                                                <Badge variant="outline" className={cn("text-[7px] font-bold", getCAPABadgeColor(linkedCapa.status))}>
+                                                    {linkedCapa.status}
+                                                </Badge>
+                                                <ExternalLink className="w-2.5 h-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-[10px] text-muted-foreground">—</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-0.5">
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => handleEditClick(risk)} title="Edit Risk">
+                                                <Pencil className="w-3 h-3" />
+                                            </Button>
+                                            {!risk.linkedCAPA && (
+                                                <>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-green-600" onClick={() => handleCreateCAPAForRisk(risk)} title="Create CAPA">
+                                                        <Plus className="w-3 h-3" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-blue-600" onClick={() => handleLinkCAPAToRisk(risk)} title="Link existing CAPA">
+                                                        <Link2 className="w-3 h-3" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
                 {filteredRisks.length > 0 && (
@@ -208,7 +334,7 @@ export function RiskRegisterTab() {
                 )}
             </div>
 
-            {/* Edit Dialog - kept same logic */}
+            {/* Edit Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
@@ -279,7 +405,28 @@ export function RiskRegisterTab() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Linked CAPA</Label>
-                                    <Input value={editingRisk.linkedCAPA} onChange={(e) => setEditingRisk({ ...editingRisk, linkedCAPA: e.target.value })} />
+                                    <Select
+                                        value={editingRisk.linkedCAPA || "none"}
+                                        onValueChange={(val) => setEditingRisk({ ...editingRisk, linkedCAPA: val === "none" ? "" : val })}
+                                    >
+                                        <SelectTrigger><SelectValue placeholder="Select CAPA..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">— None —</SelectItem>
+                                            {capas.map(c => (
+                                                <SelectItem key={c.capaId} value={c.capaId}>
+                                                    {c.capaId} — {c.description?.substring(0, 40)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {editingRisk.linkedCAPA && (() => {
+                                        const lc = capas.find(c => c.capaId === editingRisk.linkedCAPA);
+                                        return lc ? (
+                                            <div className="text-[10px] text-muted-foreground mt-1 p-2 rounded bg-muted/30 border border-border/30">
+                                                <span className="font-bold">{lc.capaId}</span> — Status: <Badge variant="outline" className={cn("text-[7px]", getCAPABadgeColor(lc.status))}>{lc.status}</Badge>
+                                            </div>
+                                        ) : null;
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -293,6 +440,155 @@ export function RiskRegisterTab() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Create CAPA from Risk Dialog */}
+            <Dialog open={isCreateCAPAOpen} onOpenChange={setIsCreateCAPAOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="font-bold text-xl flex items-center gap-2">
+                            <Plus className="w-5 h-5 text-green-600" />
+                            Create CAPA for {capaSourceRisk?.riskId}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            This will create a new CAPA linked to risk <span className="font-bold">{capaSourceRisk?.riskId}</span> and automatically update both records.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        {/* Risk summary */}
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/30 space-y-1">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Source Risk</div>
+                            <div className="text-sm font-semibold">{capaSourceRisk?.riskDescription}</div>
+                            <div className="text-xs text-muted-foreground">Cause: {capaSourceRisk?.cause}</div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</Label>
+                            <Select value={newCAPAData.type} onValueChange={(val: any) => setNewCAPAData({ ...newCAPAData, type: val })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Corrective">Corrective</SelectItem>
+                                    <SelectItem value="Preventive">Preventive</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Description</Label>
+                            <Textarea value={newCAPAData.description} onChange={(e) => setNewCAPAData({ ...newCAPAData, description: e.target.value })} className="min-h-[60px]" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                Root Cause Analysis <span className="text-destructive">*</span>
+                            </Label>
+                            <Textarea value={newCAPAData.rootCauseAnalysis} onChange={(e) => setNewCAPAData({ ...newCAPAData, rootCauseAnalysis: e.target.value })} className="min-h-[60px]" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Corrective Action</Label>
+                                <Textarea value={newCAPAData.correctiveAction} onChange={(e) => setNewCAPAData({ ...newCAPAData, correctiveAction: e.target.value })} className="min-h-[60px]" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Preventive Action</Label>
+                                <Textarea value={newCAPAData.preventiveAction} onChange={(e) => setNewCAPAData({ ...newCAPAData, preventiveAction: e.target.value })} className="min-h-[60px]" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Responsible Person</Label>
+                                <Input value={newCAPAData.responsiblePerson} onChange={(e) => setNewCAPAData({ ...newCAPAData, responsiblePerson: e.target.value })} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                    Target Date <span className="text-destructive">*</span>
+                                </Label>
+                                <Input type="date" value={newCAPAData.targetCompletionDate} onChange={(e) => setNewCAPAData({ ...newCAPAData, targetCompletionDate: e.target.value })} />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setIsCreateCAPAOpen(false)}>Cancel</Button>
+                        <Button
+                            onClick={handleSubmitCreateCAPA}
+                            disabled={isAddingCAPA || !newCAPAData.rootCauseAnalysis || !newCAPAData.targetCompletionDate}
+                            className="gap-2"
+                        >
+                            {isAddingCAPA && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Create CAPA & Link
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Link Existing CAPA Dialog */}
+            <Dialog open={isLinkCAPAOpen} onOpenChange={setIsLinkCAPAOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="font-bold text-lg flex items-center gap-2">
+                            <Link2 className="w-5 h-5 text-blue-600" />
+                            Link CAPA to {linkSourceRisk?.riskId}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Select an existing CAPA to link to this risk. Both records will be updated.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Select CAPA</Label>
+                            <Select value={selectedCAPAId} onValueChange={setSelectedCAPAId}>
+                                <SelectTrigger><SelectValue placeholder="Choose CAPA..." /></SelectTrigger>
+                                <SelectContent>
+                                    {capas.map(c => (
+                                        <SelectItem key={c.capaId} value={c.capaId}>
+                                            {c.capaId} — {c.status} — {c.description?.substring(0, 30)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {selectedCAPAId && (() => {
+                            const sc = capas.find(c => c.capaId === selectedCAPAId);
+                            return sc ? (
+                                <div className="p-3 rounded-lg bg-muted/30 border border-border/30 space-y-1 text-xs">
+                                    <div className="font-bold">{sc.capaId}</div>
+                                    <div className="text-muted-foreground">{sc.description}</div>
+                                    <div className="flex gap-2 mt-1">
+                                        <Badge variant="outline" className={cn("text-[7px]", getCAPABadgeColor(sc.status))}>{sc.status}</Badge>
+                                        <Badge variant="outline" className="text-[7px]">{sc.type}</Badge>
+                                    </div>
+                                </div>
+                            ) : null;
+                        })()}
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setIsLinkCAPAOpen(false)}>Cancel</Button>
+                        <Button
+                            onClick={() => {
+                                if (!linkSourceRisk || !selectedCAPAId) return;
+                                updateRisk({
+                                    riskId: linkSourceRisk.riskId,
+                                    updates: { linkedCAPA: selectedCAPAId },
+                                });
+                                setIsLinkCAPAOpen(false);
+                                setLinkSourceRisk(null);
+                            }}
+                            disabled={!selectedCAPAId || isUpdating}
+                            className="gap-2"
+                        >
+                            {isUpdating && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Link CAPA
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
+}
+
+function getCAPABadgeColor(status: string): string {
+    switch (status) {
+        case "Open": return "text-red-600 bg-red-100";
+        case "In Progress": return "text-blue-600 bg-blue-100";
+        case "Under Verification": return "text-yellow-600 bg-yellow-100";
+        case "Closed": return "text-green-600 bg-green-100";
+        default: return "";
+    }
 }
