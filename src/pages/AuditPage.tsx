@@ -21,13 +21,18 @@ import {
   CalendarClock,
   Loader2,
   ArrowRight,
+  CheckCheck,
+  RotateCcw,
+  Download,
+  Upload,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQueryClient } from "@tanstack/react-query";
-import { normalizeCategory } from "@/lib/googleSheets";
-
+import { normalizeCategory, updateSheetCell } from "@/lib/googleSheets";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 export default function AuditPage() {
   const navigate = useNavigate();
   const location = useLocation();
