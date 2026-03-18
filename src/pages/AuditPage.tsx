@@ -69,6 +69,108 @@ export default function AuditPage() {
     refetch();
   };
 
+  // Bulk status change: updates all files in a tab to a new status
+  const handleBulkStatusChange = useCallback(async (items: any[], newStatus: string) => {
+    if (items.length === 0) return;
+    setBulkLoading(true);
+    const reviewerName = user?.name || user?.email || "System";
+
+    try {
+      // Group items by rowIndex (same record)
+      const grouped = new Map<number, { record: any; fileIds: string[] }>();
+      items.forEach(item => {
+        if (!grouped.has(item.rowIndex)) {
+          grouped.set(item.rowIndex, { record: item, fileIds: [] });
+        }
+        grouped.get(item.rowIndex)!.fileIds.push(item.fileId);
+      });
+
+      let successCount = 0;
+      for (const [rowIndex, { record, fileIds }] of grouped) {
+        const updatedReviews = { ...(record.fileReviews || {}) };
+        fileIds.forEach(fileId => {
+          updatedReviews[fileId] = {
+            ...(updatedReviews[fileId] || {}),
+            status: newStatus,
+            reviewedBy: reviewerName,
+            date: new Date().toISOString(),
+          };
+        });
+
+        const success = await updateSheetCell(rowIndex, 'P', JSON.stringify(updatedReviews));
+        if (success) successCount += fileIds.length;
+      }
+
+      toast({
+        title: `Bulk Update Complete`,
+        description: `${successCount} files changed to "${newStatus}"`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["qms-data"] });
+    } catch (error: any) {
+      toast({ title: "Bulk Update Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setBulkLoading(false);
+    }
+  }, [user, queryClient, toast]);
+
+  // Export all metadata to JSON file
+  const handleExportMetadata = useCallback(() => {
+    if (!records) return;
+    const metadata = records
+      .filter(r => r.fileReviews && Object.keys(r.fileReviews).length > 0)
+      .map(r => ({
+        code: r.code,
+        recordName: r.recordName,
+        category: r.category,
+        rowIndex: r.rowIndex,
+        fileReviews: r.fileReviews,
+      }));
+
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `qms-metadata-backup-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Metadata Exported", description: `${metadata.length} records exported` });
+  }, [records, toast]);
+
+  // Import metadata from JSON file
+  const handleImportMetadata = useCallback(async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setBulkLoading(true);
+      try {
+        const text = await file.text();
+        const metadata = JSON.parse(text);
+        if (!Array.isArray(metadata)) throw new Error("Invalid file format");
+
+        let successCount = 0;
+        for (const item of metadata) {
+          if (!item.rowIndex || !item.fileReviews) continue;
+          const success = await updateSheetCell(item.rowIndex, 'P', JSON.stringify(item.fileReviews));
+          if (success) successCount++;
+        }
+
+        toast({
+          title: "Metadata Imported",
+          description: `${successCount} records restored successfully`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["qms-data"] });
+      } catch (error: any) {
+        toast({ title: "Import Failed", description: error.message, variant: "destructive" });
+      } finally {
+        setBulkLoading(false);
+      }
+    };
+    input.click();
+  }, [queryClient, toast]);
+
   const handleModuleChange = (newModuleId: string) => {
     setActiveModule(newModuleId);
     if (newModuleId === "dashboard") navigate("/");
