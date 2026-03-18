@@ -21,22 +21,30 @@ import {
   CalendarClock,
   Loader2,
   ArrowRight,
+  CheckCheck,
+  RotateCcw,
+  Download,
+  Upload,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQueryClient } from "@tanstack/react-query";
-import { normalizeCategory } from "@/lib/googleSheets";
-
+import { normalizeCategory, updateSheetCell } from "@/lib/googleSheets";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 export default function AuditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [activeModule, setActiveModule] = useState("quality");
   const [activeTab, setActiveTab] = useState("pending");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(localStorage.getItem('sidebarCollapsed') === 'true');
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -60,6 +68,108 @@ export default function AuditPage() {
     queryClient.invalidateQueries({ queryKey: ["qms-data"] });
     refetch();
   };
+
+  // Bulk status change: updates all files in a tab to a new status
+  const handleBulkStatusChange = useCallback(async (items: any[], newStatus: string) => {
+    if (items.length === 0) return;
+    setBulkLoading(true);
+    const reviewerName = user?.name || user?.email || "System";
+
+    try {
+      // Group items by rowIndex (same record)
+      const grouped = new Map<number, { record: any; fileIds: string[] }>();
+      items.forEach(item => {
+        if (!grouped.has(item.rowIndex)) {
+          grouped.set(item.rowIndex, { record: item, fileIds: [] });
+        }
+        grouped.get(item.rowIndex)!.fileIds.push(item.fileId);
+      });
+
+      let successCount = 0;
+      for (const [rowIndex, { record, fileIds }] of grouped) {
+        const updatedReviews = { ...(record.fileReviews || {}) };
+        fileIds.forEach(fileId => {
+          updatedReviews[fileId] = {
+            ...(updatedReviews[fileId] || {}),
+            status: newStatus,
+            reviewedBy: reviewerName,
+            date: new Date().toISOString(),
+          };
+        });
+
+        const success = await updateSheetCell(rowIndex, 'P', JSON.stringify(updatedReviews));
+        if (success) successCount += fileIds.length;
+      }
+
+      toast({
+        title: `Bulk Update Complete`,
+        description: `${successCount} files changed to "${newStatus}"`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["qms-data"] });
+    } catch (error: any) {
+      toast({ title: "Bulk Update Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setBulkLoading(false);
+    }
+  }, [user, queryClient, toast]);
+
+  // Export all metadata to JSON file
+  const handleExportMetadata = useCallback(() => {
+    if (!records) return;
+    const metadata = records
+      .filter(r => r.fileReviews && Object.keys(r.fileReviews).length > 0)
+      .map(r => ({
+        code: r.code,
+        recordName: r.recordName,
+        category: r.category,
+        rowIndex: r.rowIndex,
+        fileReviews: r.fileReviews,
+      }));
+
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `qms-metadata-backup-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Metadata Exported", description: `${metadata.length} records exported` });
+  }, [records, toast]);
+
+  // Import metadata from JSON file
+  const handleImportMetadata = useCallback(async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setBulkLoading(true);
+      try {
+        const text = await file.text();
+        const metadata = JSON.parse(text);
+        if (!Array.isArray(metadata)) throw new Error("Invalid file format");
+
+        let successCount = 0;
+        for (const item of metadata) {
+          if (!item.rowIndex || !item.fileReviews) continue;
+          const success = await updateSheetCell(item.rowIndex, 'P', JSON.stringify(item.fileReviews));
+          if (success) successCount++;
+        }
+
+        toast({
+          title: "Metadata Imported",
+          description: `${successCount} records restored successfully`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["qms-data"] });
+      } catch (error: any) {
+        toast({ title: "Import Failed", description: error.message, variant: "destructive" });
+      } finally {
+        setBulkLoading(false);
+      }
+    };
+    input.click();
+  }, [queryClient, toast]);
 
   const handleModuleChange = (newModuleId: string) => {
     setActiveModule(newModuleId);
@@ -222,13 +332,21 @@ export default function AuditPage() {
                   <p className="text-xs text-muted-foreground">ISO 9001:2015 Compliance Review</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 {lastUpdated && (
                   <span className="hidden sm:flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border/50">
                     <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                     Synced {lastUpdated}
                   </span>
                 )}
+                <Button onClick={handleExportMetadata} variant="outline" size="sm" className="h-8 gap-1.5 text-xs" disabled={!records || records.length === 0}>
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Backup</span>
+                </Button>
+                <Button onClick={handleImportMetadata} variant="outline" size="sm" className="h-8 gap-1.5 text-xs" disabled={bulkLoading}>
+                  <Upload className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Restore</span>
+                </Button>
                 <Button onClick={handleRefresh} variant="outline" size="sm" className="h-8 gap-2" disabled={isLoading}>
                   {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   Sync
@@ -331,12 +449,71 @@ export default function AuditPage() {
                 </div>
 
                 <TabsContent value="pending" className="m-0">
+                  {pendingRecords.length > 0 && (
+                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20">
+                      <Button
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(pendingRecords, 'approved')}
+                      >
+                        {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
+                        Approve All ({pendingRecords.length})
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(pendingRecords, 'rejected')}
+                      >
+                        Reject All
+                      </Button>
+                    </div>
+                  )}
                   <RecordsTable records={pendingRecords} isLoading={isLoading} />
                 </TabsContent>
                 <TabsContent value="compliant" className="m-0">
+                  {compliantRecords.length > 0 && (
+                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(compliantRecords, 'pending_review')}
+                      >
+                        {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        Reset All to Pending ({compliantRecords.length})
+                      </Button>
+                    </div>
+                  )}
                   <RecordsTable records={compliantRecords} isLoading={isLoading} />
                 </TabsContent>
                 <TabsContent value="issues" className="m-0">
+                  {issueRecords.length > 0 && (
+                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20">
+                      <Button
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(issueRecords, 'approved')}
+                      >
+                        {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
+                        Approve All ({issueRecords.length})
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(issueRecords, 'pending_review')}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Reset to Pending
+                      </Button>
+                    </div>
+                  )}
                   <RecordsTable records={issueRecords} isLoading={isLoading} />
                 </TabsContent>
 
