@@ -332,13 +332,21 @@ export default function AuditPage() {
                   <p className="text-xs text-muted-foreground">ISO 9001:2015 Compliance Review</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 {lastUpdated && (
                   <span className="hidden sm:flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border/50">
                     <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                     Synced {lastUpdated}
                   </span>
                 )}
+                <Button onClick={handleExportMetadata} variant="outline" size="sm" className="h-8 gap-1.5 text-xs" disabled={!records || records.length === 0}>
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Backup</span>
+                </Button>
+                <Button onClick={handleImportMetadata} variant="outline" size="sm" className="h-8 gap-1.5 text-xs" disabled={bulkLoading}>
+                  <Upload className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Restore</span>
+                </Button>
                 <Button onClick={handleRefresh} variant="outline" size="sm" className="h-8 gap-2" disabled={isLoading}>
                   {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   Sync
