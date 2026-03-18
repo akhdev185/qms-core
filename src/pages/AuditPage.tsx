@@ -449,12 +449,71 @@ export default function AuditPage() {
                 </div>
 
                 <TabsContent value="pending" className="m-0">
+                  {pendingRecords.length > 0 && (
+                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20">
+                      <Button
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(pendingRecords, 'approved')}
+                      >
+                        {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
+                        Approve All ({pendingRecords.length})
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(pendingRecords, 'rejected')}
+                      >
+                        Reject All
+                      </Button>
+                    </div>
+                  )}
                   <RecordsTable records={pendingRecords} isLoading={isLoading} />
                 </TabsContent>
                 <TabsContent value="compliant" className="m-0">
+                  {compliantRecords.length > 0 && (
+                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(compliantRecords, 'pending_review')}
+                      >
+                        {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        Reset All to Pending ({compliantRecords.length})
+                      </Button>
+                    </div>
+                  )}
                   <RecordsTable records={compliantRecords} isLoading={isLoading} />
                 </TabsContent>
                 <TabsContent value="issues" className="m-0">
+                  {issueRecords.length > 0 && (
+                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20">
+                      <Button
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(issueRecords, 'approved')}
+                      >
+                        {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
+                        Approve All ({issueRecords.length})
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={bulkLoading}
+                        onClick={() => handleBulkStatusChange(issueRecords, 'pending_review')}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Reset to Pending
+                      </Button>
+                    </div>
+                  )}
                   <RecordsTable records={issueRecords} isLoading={isLoading} />
                 </TabsContent>
 
