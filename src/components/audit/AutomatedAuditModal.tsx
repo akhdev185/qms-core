@@ -180,7 +180,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col relative">
+        <div className="flex-1 overflow-hidden flex flex-col relative min-h-0">
           {!isRunning && !results && (
             <div className="flex-1 p-12 flex flex-col items-center justify-center text-center space-y-6">
               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -275,7 +275,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 p-6">
+              <ScrollArea className="flex-1 h-full p-6">
                 <div className="space-y-4">
                   {results.filter(r => r.issues.length > 0).length === 0 ? (
                     <div className="text-center p-12 bg-background rounded-xl border border-border">

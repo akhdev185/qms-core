@@ -1,4 +1,4 @@
-import { Search, FileText, Folder, Layout, FileCode, CheckCircle, ExternalLink, Table, Loader2, Menu } from "lucide-react";
+import { Search, FileText, Folder, Layout, FileCode, CheckCircle, ExternalLink, Table, Loader2, Menu, AlertTriangle } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef } from "react";
@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { searchProjectDrive, DriveSearchResult } from "@/lib/driveService";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { getAccessToken } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 
 export function Header() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -16,6 +18,19 @@ export function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    async function checkStatus() {
+      const token = await getAccessToken();
+      setDriveConnected(!!token);
+    }
+    checkStatus();
+    
+    // Check periodically
+    const interval = setInterval(checkStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const userInitials = (user?.name || "U").slice(0, 2).toUpperCase();
 
@@ -159,6 +174,25 @@ export function Header() {
 
         {/* Right section */}
         <div className="ml-auto flex items-center gap-2">
+          {driveConnected === false && (
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              className="h-8 text-[10px] gap-1.5 px-3 rounded-full animate-pulse shadow-lg shadow-destructive/20 border-white/20"
+              onClick={() => window.open('/api/auth', '_blank')}
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span className="font-bold uppercase tracking-wider">Connect Drive</span>
+            </Button>
+          )}
+
+          {driveConnected === true && (
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 border border-success/20 text-success mr-2">
+               <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+               <span className="text-[10px] font-bold uppercase tracking-wider">Drive Active</span>
+            </div>
+          )}
+
           <NotificationBell />
           {/* Mobile search toggle */}
           <button

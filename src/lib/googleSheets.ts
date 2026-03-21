@@ -288,54 +288,59 @@ export async function fetchSheetDataWithDriveCounts(): Promise<QMSRecord[]> {
  */
 export async function fetchSheetDataWithAllFiles(): Promise<QMSRecord[]> {
   const records = await fetchSheetData();
-  const { batchGetFolderFiles } = await import('./driveService');
+  
+  try {
+    const { batchGetFolderFiles } = await import('./driveService');
 
-  const folderLinks = records
-    .map(r => r.folderLink)
-    .filter(link => link && link.trim() !== "" && !link.includes("No Files Yet"));
+    const folderLinks = records
+      .map(r => r.folderLink)
+      .filter(link => link && link.trim() !== "" && !link.includes("No Files Yet"));
 
-  const allFiles = await batchGetFolderFiles(folderLinks);
+    const allFiles = await batchGetFolderFiles(folderLinks);
 
-  records.forEach(record => {
-    const driveFiles = allFiles.get(record.folderLink);
-    if (driveFiles) {
-      record.files = driveFiles;
-      record.actualRecordCount = driveFiles.length;
+    records.forEach(record => {
+      const driveFiles = allFiles.get(record.folderLink);
+      if (driveFiles) {
+        record.files = driveFiles;
+        record.actualRecordCount = driveFiles.length;
 
-      if (!record.fileReviews) record.fileReviews = {};
+        if (!record.fileReviews) record.fileReviews = {};
 
-      driveFiles.forEach(file => {
-        const review = record.fileReviews![file.id] || { status: 'pending_review', comment: '' };
-        
-        if (!review.project) {
-           review.project = "General / All Company";
+        driveFiles.forEach(file => {
+          const review = record.fileReviews![file.id] || { status: 'pending_review', comment: '' };
+          
+          if (!review.project) {
+             review.project = "General / All Company";
+          }
+          if (!review.targetMonth || !review.targetYear) {
+             const d = file.createdTime ? new Date(file.createdTime) : new Date();
+             review.targetMonth = (d.getMonth() + 1).toString();
+             review.targetYear = d.getFullYear().toString();
+          }
+          
+          record.fileReviews![file.id] = review;
+        });
+
+        // Update lastFileDate dynamically from the actual Drive files
+        if (driveFiles.length > 0) {
+          // Sort files by createdTime to find the absolute newest one
+          const sortedFiles = [...driveFiles].sort((a, b) =>
+            new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
+          );
+
+          const newestDate = sortedFiles[0].createdTime;
+          record.lastFileDate = newestDate;
+
+          // RE-CALCULATE compliance stats with this live date
+          const liveStats = calculateFillStats(record.whenToFill || "", newestDate);
+          record.daysUntilNextFill = liveStats.daysUntilNextFill;
+          record.isOverdue = liveStats.isOverdue;
         }
-        if (!review.targetMonth || !review.targetYear) {
-           const d = file.createdTime ? new Date(file.createdTime) : new Date();
-           review.targetMonth = (d.getMonth() + 1).toString();
-           review.targetYear = d.getFullYear().toString();
-        }
-        
-        record.fileReviews![file.id] = review;
-      });
-
-      // Update lastFileDate dynamically from the actual Drive files
-      if (driveFiles.length > 0) {
-        // Sort files by createdTime to find the absolute newest one
-        const sortedFiles = [...driveFiles].sort((a, b) =>
-          new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
-        );
-
-        const newestDate = sortedFiles[0].createdTime;
-        record.lastFileDate = newestDate;
-
-        // RE-CALCULATE compliance stats with this live date
-        const liveStats = calculateFillStats(record.whenToFill || "", newestDate);
-        record.daysUntilNextFill = liveStats.daysUntilNextFill;
-        record.isOverdue = liveStats.isOverdue;
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error("Failed to fetch Drive files, continuing with sheet data only:", error);
+  }
 
   return records;
 }

@@ -1,10 +1,13 @@
 // Google Drive API Service
 // Handles interaction with Google Drive to count and list files in folders
 
+import { QMSRecord } from './googleSheets';
 import { getAccessToken } from './auth';
 
+// Add API_KEY from googleSheets for fallback
 const API_KEY = "AIzaSyDltPnR5hhwfDrjlwi7lS78R_kDIZbQpWo";
 const DRIVE_API_BASE = "https://www.googleapis.com/drive/v3";
+const SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
 
 export interface DriveSearchResult extends DriveFile {
   parentName?: string;
@@ -104,7 +107,6 @@ export async function getFolderFileCount(folderLink: string): Promise<number> {
 
   try {
     const token = await getAccessToken();
-    if (!token) throw new Error("No access token for Drive operations");
 
     // Query for files in the folder (excluding trashed items and the Archive folder)
     const query = `'${folderId}' in parents and trashed=false and name != 'Archive'`;
@@ -112,12 +114,25 @@ export async function getFolderFileCount(folderLink: string): Promise<number> {
 
     const response = await fetch(url, { 
       cache: "no-store", 
-      headers: { 
+      headers: token ? { 
         'Authorization': `Bearer ${token}`,
         'Pragma': 'no-cache', 
         'Cache-Control': 'no-cache' 
-      } 
+      } : {
+        'Pragma': 'no-cache', 
+        'Cache-Control': 'no-cache' 
+      }
     });
+
+    if (!response.ok && !token) {
+      // Try with API key if token failed or missing
+      const fallbackUrl = `${url}${url.includes('?') ? '&' : '?'}key=${API_KEY}`;
+      const fallbackResponse = await fetch(fallbackUrl);
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json();
+        return data.files?.length || 0;
+      }
+    }
 
     if (!response.ok) {
       console.error(`Drive API error for folder ${folderId}:`, response.status, response.statusText);
@@ -146,7 +161,6 @@ export async function listFolderFiles(folderLink: string): Promise<DriveFile[]> 
 
   try {
     const token = await getAccessToken();
-    if (!token) throw new Error("No access token for Drive operations");
 
     // Query for files in the folder (excluding trashed items and the Archive folder)
     const query = `'${folderId}' in parents and trashed=false and name != 'Archive'`;
@@ -155,12 +169,25 @@ export async function listFolderFiles(folderLink: string): Promise<DriveFile[]> 
 
     const response = await fetch(url, { 
       cache: "no-store", 
-      headers: { 
+      headers: token ? { 
         'Authorization': `Bearer ${token}`,
         'Pragma': 'no-cache', 
         'Cache-Control': 'no-cache' 
-      } 
+      } : {
+        'Pragma': 'no-cache', 
+        'Cache-Control': 'no-cache' 
+      }
     });
+
+    if (!response.ok && !token) {
+      // Try with API key if token failed or missing
+      const fallbackUrl = `${url}${url.includes('?') ? '&' : '?'}key=${API_KEY}`;
+      const fallbackResponse = await fetch(fallbackUrl);
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json();
+        return data.files || [];
+      }
+    }
 
     if (!response.ok) {
       console.error(`Drive API error for folder ${folderId}:`, response.status, response.statusText);
@@ -183,18 +210,30 @@ export async function listFolderFiles(folderLink: string): Promise<DriveFile[]> 
 export async function getFileMetadata(fileId: string): Promise<FileMetadata | null> {
   try {
     const token = await getAccessToken();
-    if (!token) throw new Error("No access token for Drive operations");
     
     const fields = "id,name,createdTime,modifiedTime,webViewLink,mimeType";
     const url = `${DRIVE_API_BASE}/files/${fileId}?fields=${encodeURIComponent(fields)}&t=${Date.now()}`;
-    const response = await fetch(url, { 
+    
+    let response = await fetch(url, { 
       cache: "no-store", 
-      headers: { 
+      headers: token ? { 
         'Authorization': `Bearer ${token}`,
         'Pragma': 'no-cache', 
         'Cache-Control': 'no-cache, no-store, must-revalidate' 
-      } 
+      } : {
+        'Pragma': 'no-cache', 
+        'Cache-Control': 'no-cache, no-store, must-revalidate' 
+      }
     });
+
+    if (!response.ok && !token) {
+      // Try with API key if token failed or missing
+      const fallbackUrl = `${url}${url.includes('?') ? '&' : '?'}key=${API_KEY}`;
+      const fallbackResponse = await fetch(fallbackUrl);
+      if (fallbackResponse.ok) {
+        response = fallbackResponse; // Use the fallback response if successful
+      }
+    }
 
     if (!response.ok) {
       console.error(`Drive API error for file ${fileId}:`, response.status, response.statusText);
