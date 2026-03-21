@@ -15,7 +15,8 @@ export async function getAccessToken(): Promise<string | null> {
         // Use relative path for production (served by unified express server)
         // For local vite development, we might need the full URL if running on different ports
         const isDev = import.meta.env.DEV;
-        const apiBase = isDev ? 'http://localhost:3001' : '';
+        // With Vite proxy, we can use relative paths both in dev and prod
+        const apiBase = ''; 
 
         const response = await fetch(`${apiBase}/api/token`).catch(e => {
             console.error('DEBUG: OAuth API is not reachable.');

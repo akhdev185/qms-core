@@ -31,6 +31,7 @@ export interface FileMetadata {
   createdTime: Date;
   modifiedTime: Date;
   link: string;
+  mimeType?: string;
 }
 
 /**
@@ -102,11 +103,21 @@ export async function getFolderFileCount(folderLink: string): Promise<number> {
   }
 
   try {
+    const token = await getAccessToken();
+    if (!token) throw new Error("No access token for Drive operations");
+
     // Query for files in the folder (excluding trashed items and the Archive folder)
     const query = `'${folderId}' in parents and trashed=false and name != 'Archive'`;
-    const url = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=files(id)&key=${API_KEY}`;
+    const url = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=files(id)&t=${Date.now()}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, { 
+      cache: "no-store", 
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Pragma': 'no-cache', 
+        'Cache-Control': 'no-cache' 
+      } 
+    });
 
     if (!response.ok) {
       console.error(`Drive API error for folder ${folderId}:`, response.status, response.statusText);
@@ -134,12 +145,22 @@ export async function listFolderFiles(folderLink: string): Promise<DriveFile[]> 
   }
 
   try {
+    const token = await getAccessToken();
+    if (!token) throw new Error("No access token for Drive operations");
+
     // Query for files in the folder (excluding trashed items and the Archive folder)
     const query = `'${folderId}' in parents and trashed=false and name != 'Archive'`;
     const fields = "files(id,name,mimeType,createdTime,modifiedTime,webViewLink,size,parents,description)";
-    const url = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=${fields}&orderBy=createdTime desc&key=${API_KEY}`;
+    const url = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=${fields}&orderBy=createdTime desc&t=${Date.now()}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, { 
+      cache: "no-store", 
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Pragma': 'no-cache', 
+        'Cache-Control': 'no-cache' 
+      } 
+    });
 
     if (!response.ok) {
       console.error(`Drive API error for folder ${folderId}:`, response.status, response.statusText);
@@ -161,10 +182,19 @@ export async function listFolderFiles(folderLink: string): Promise<DriveFile[]> 
  */
 export async function getFileMetadata(fileId: string): Promise<FileMetadata | null> {
   try {
-    const fields = "id,name,createdTime,modifiedTime,webViewLink";
-    const url = `${DRIVE_API_BASE}/files/${fileId}?fields=${fields}&key=${API_KEY}`;
-
-    const response = await fetch(url);
+    const token = await getAccessToken();
+    if (!token) throw new Error("No access token for Drive operations");
+    
+    const fields = "id,name,createdTime,modifiedTime,webViewLink,mimeType";
+    const url = `${DRIVE_API_BASE}/files/${fileId}?fields=${encodeURIComponent(fields)}&t=${Date.now()}`;
+    const response = await fetch(url, { 
+      cache: "no-store", 
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Pragma': 'no-cache', 
+        'Cache-Control': 'no-cache, no-store, must-revalidate' 
+      } 
+    });
 
     if (!response.ok) {
       console.error(`Drive API error for file ${fileId}:`, response.status, response.statusText);
@@ -179,6 +209,7 @@ export async function getFileMetadata(fileId: string): Promise<FileMetadata | nu
       createdTime: new Date(data.createdTime),
       modifiedTime: new Date(data.modifiedTime),
       link: data.webViewLink,
+      mimeType: data.mimeType,
     };
   } catch (error) {
     console.error("Error fetching file metadata:", error);
@@ -260,8 +291,9 @@ export async function searchProjectDrive(searchTerm: string): Promise<DriveSearc
   }
 
   try {
-    // Search for name containing term, not trashed
-    const query = `name contains '${searchTerm}' and trashed = false`;
+    // Search for name containing term or full content containing term, not trashed
+    // Note: fullText searches inside Google Docs, Sheets, PDFs, etc.
+    const query = `(name contains '${searchTerm}' or fullText contains '${searchTerm}') and trashed = false`;
     const fields = "files(id,name,mimeType,webViewLink,parents,iconLink,thumbnailLink)";
     const url = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&pageSize=15&key=${API_KEY}`;
 
@@ -667,4 +699,35 @@ export async function uploadFileToDrive(file: File, folderLink?: string, nameOve
     throw new Error(err.error?.message || "Upload failed");
   }
   return await res.json();
+}
+
+/**
+ * Rename a file or folder in Google Drive
+ */
+export async function renameDriveFile(fileId: string, newName: string): Promise<boolean> {
+  const token = await getAccessToken();
+  if (!token) throw new Error("No access token for Drive operations");
+
+  try {
+    const url = `${DRIVE_API_BASE}/files/${fileId}?key=${API_KEY}`;
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: newName })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("Rename failed:", err);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error renaming drive file:", error);
+    return false;
+  }
 }

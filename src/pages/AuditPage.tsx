@@ -8,6 +8,7 @@ import { useQMSData } from "@/hooks/useQMSData";
 import { RecordsTable } from "@/components/records/RecordsTable";
 import { AuditCharts } from "@/components/audit/AuditCharts";
 import { AuditFilters } from "@/components/audit/AuditFilters";
+import { AutomatedAuditModal } from "@/components/audit/AutomatedAuditModal";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -25,6 +26,7 @@ import {
   RotateCcw,
   Download,
   Upload,
+  PlayCircle,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,7 @@ export default function AuditPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -211,16 +214,35 @@ export default function AuditPage() {
     records.forEach(record => {
       const files = record.files || [];
       const reviews = record.fileReviews || {};
+      const recordLevelStatus = (reviews as any).recordStatus;
+      
       files.forEach(file => {
         const review = reviews[file.id] || { status: 'pending_review', comment: '' };
+        
+        // Final effective status for this file
+        let effectiveStatus: string = review.status;
+        
+        // If the entire form has an integrity issue set by Automated Audit, 
+        // treat files as 'rejected' unless they were already manually reviewed/approved
+        if (recordLevelStatus === 'rejected' && review.status === 'pending_review') {
+          effectiveStatus = 'rejected';
+        }
+
         const auditItem = {
-          ...record, fileId: file.id, fileName: file.name, fileLink: file.webViewLink,
-          fileStatus: review.status, fileComment: review.comment,
-          fileReviewedBy: review.reviewedBy || record.reviewedBy || "", isAtomic: true
+          ...record, 
+          fileId: file.id, 
+          fileName: file.name, 
+          fileLink: file.webViewLink,
+          fileStatus: effectiveStatus, 
+          fileComment: review.comment || (recordLevelStatus === 'rejected' ? "Automated Audit detected issues in this form." : ""),
+          fileReviewedBy: review.reviewedBy || record.reviewedBy || "", 
+          isAtomic: true
         };
+
         if (!matchesSearch(auditItem) || !matchesCategory(auditItem)) return;
-        if (review.status === 'approved') compliant.push(auditItem);
-        else if (review.status === 'rejected') issuesList.push(auditItem);
+        
+        if (effectiveStatus === 'approved') compliant.push(auditItem);
+        else if (effectiveStatus === 'rejected') issuesList.push(auditItem);
         else pending.push(auditItem);
       });
     });
@@ -237,10 +259,17 @@ export default function AuditPage() {
       const entry = catMap.get(cat)!;
       const files = record.files || [];
       const reviews = record.fileReviews || {};
+      const recordLevelStatus = (reviews as any).recordStatus;
+
       files.forEach(file => {
         const review = reviews[file.id] || { status: 'pending_review' };
-        if (review.status === 'approved') entry.compliant++;
-        else if (review.status === 'rejected') entry.issues++;
+        let effectiveStatus = review.status;
+        if (recordLevelStatus === 'rejected' && review.status === 'pending_review') {
+            effectiveStatus = 'rejected';
+        }
+
+        if (effectiveStatus === 'approved') entry.compliant++;
+        else if (effectiveStatus === 'rejected') entry.issues++;
         else entry.pending++;
       });
     });
@@ -339,6 +368,12 @@ export default function AuditPage() {
                     Synced {lastUpdated}
                   </span>
                 )}
+                
+                <Button onClick={() => setIsAuditModalOpen(true)} className="h-8 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] sm:text-xs">
+                  <PlayCircle className="w-4 h-4" />
+                  <span className="hidden sm:inline">Run Audit</span>
+                </Button>
+
                 <Button onClick={handleExportMetadata} variant="outline" size="sm" className="h-8 gap-1.5 text-xs" disabled={!records || records.length === 0}>
                   <Download className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Backup</span>
@@ -626,6 +661,13 @@ export default function AuditPage() {
                 </TabsContent>
               </Tabs>
             </div>
+
+            <AutomatedAuditModal
+              isOpen={isAuditModalOpen}
+              onClose={() => setIsAuditModalOpen(false)}
+              records={records || []}
+            />
+
           </div>
         </main>
         <Footer />

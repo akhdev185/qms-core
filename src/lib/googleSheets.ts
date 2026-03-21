@@ -57,7 +57,7 @@ export interface QMSRecord {
   // New field: actual count from Drive folder
   actualRecordCount?: number;
   // New field: individual file reviews (from Column P)
-  fileReviews?: Record<string, { status: RecordStatus; comment: string; reviewedBy?: string; reviewDate?: string }>;
+  fileReviews?: Record<string, { status: RecordStatus; comment: string; reviewedBy?: string; reviewDate?: string; date?: string; project?: string; targetMonth?: string; targetYear?: string; [key: string]: any }>;
   // New field: actual files from Drive
   files?: DriveFile[];
   // New field: days remaining until next required fill
@@ -301,6 +301,23 @@ export async function fetchSheetDataWithAllFiles(): Promise<QMSRecord[]> {
     if (driveFiles) {
       record.files = driveFiles;
       record.actualRecordCount = driveFiles.length;
+
+      if (!record.fileReviews) record.fileReviews = {};
+
+      driveFiles.forEach(file => {
+        const review = record.fileReviews![file.id] || { status: 'pending_review', comment: '' };
+        
+        if (!review.project) {
+           review.project = "General / All Company";
+        }
+        if (!review.targetMonth || !review.targetYear) {
+           const d = file.createdTime ? new Date(file.createdTime) : new Date();
+           review.targetMonth = (d.getMonth() + 1).toString();
+           review.targetYear = d.getFullYear().toString();
+        }
+        
+        record.fileReviews![file.id] = review;
+      });
 
       // Update lastFileDate dynamically from the actual Drive files
       if (driveFiles.length > 0) {

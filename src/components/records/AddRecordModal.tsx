@@ -15,7 +15,7 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-import { QMSRecord } from "@/lib/googleSheets";
+import { QMSRecord, updateSheetCell } from "@/lib/googleSheets";
 import { copyDriveFile } from "@/lib/driveService";
 import { Loader2, FilePlus, ExternalLink, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,29 @@ export function AddRecordModal({ isOpen, onClose, templates, onSuccess }: AddRec
     const [isCreating, setIsCreating] = useState(false);
     const [createdFile, setCreatedFile] = useState<{ name: string; link: string } | null>(null);
     const { toast } = useToast();
+
+    // New Metadata state
+    const now = new Date();
+    const [selectedProject, setSelectedProject] = useState<string>("General / All Company");
+    const [selectedMonth, setSelectedMonth] = useState<string>((now.getMonth() + 1).toString());
+    const [selectedYear, setSelectedYear] = useState<string>(now.getFullYear().toString());
+
+    const PROJECTS = [
+        "General / All Company",
+        "Omniaz Project - Mapping",
+        "Omniaz Project - Annotation",
+        "Video Detection Project",
+        "Vocal AI Project",
+        "Tennis Project",
+        "ETH Project"
+    ];
+    
+    // Generate months 1-12
+    const MONTHS = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+    
+    // Generate years from current year to +5 years
+    const currentYear = now.getFullYear();
+    const YEARS = Array.from({ length: 6 }, (_, i) => (currentYear - 1 + i).toString());
 
     const selectedTemplate = templates.find(t => t.code === selectedCode);
 
@@ -62,6 +85,23 @@ export function AddRecordModal({ isOpen, onClose, templates, onSuccess }: AddRec
             );
 
             if (result) {
+                // Save the custom metadata instantly
+                try {
+                    const newReviews = { ...(selectedTemplate.fileReviews || {}) };
+                    newReviews[result.id] = {
+                        status: 'pending_review',
+                        comment: '',
+                        project: selectedProject,
+                        targetMonth: selectedMonth,
+                        targetYear: selectedYear,
+                        reviewDate: new Date().toISOString()
+                    };
+                    await updateSheetCell(selectedTemplate.rowIndex, 'P', JSON.stringify(newReviews));
+                } catch (e) {
+                    console.error("Failed to save metadata to Google Sheets:", e);
+                    // It's not a fatal error if metadata save fails, the file is still generated
+                }
+
                 setCreatedFile({ name: result.name, link: result.webViewLink });
                 toast({
                     title: "Record Created Successfully",
@@ -115,15 +155,63 @@ export function AddRecordModal({ isOpen, onClose, templates, onSuccess }: AddRec
                         </div>
 
                         {selectedTemplate && (
-                            <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Target Folder</p>
-                                        <p className="text-xs font-semibold truncate">Module Folder</p>
+                            <div className="space-y-4">
+                                <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Target Folder</p>
+                                            <p className="text-xs font-semibold truncate">Module Folder</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Next Serial</p>
+                                            <p className="text-xs font-bold text-sidebar-primary">{calculateNextSerial(selectedTemplate)}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Next Serial</p>
-                                        <p className="text-xs font-bold text-sidebar-primary">{calculateNextSerial(selectedTemplate)}</p>
+                                </div>
+
+                                {/* Metadata Fields */}
+                                <div className="space-y-3 pt-2">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs text-muted-foreground">Assigned Project</Label>
+                                        <Select value={selectedProject} onValueChange={setSelectedProject}>
+                                            <SelectTrigger className="w-full h-8 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {PROJECTS.map(p => (
+                                                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">Target Month</Label>
+                                            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                                                <SelectTrigger className="w-full h-8 text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {MONTHS.map(m => (
+                                                        <SelectItem key={m} value={m}>Month {m}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">Target Year</Label>
+                                            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                                <SelectTrigger className="w-full h-8 text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {YEARS.map(y => (
+                                                        <SelectItem key={y} value={y}>{y}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

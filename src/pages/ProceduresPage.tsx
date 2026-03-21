@@ -3,14 +3,16 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { cn } from "@/lib/utils";
+import { getAccessToken } from "@/lib/auth";
 import { 
   FileText, Folder, ChevronLeft, ChevronRight, Maximize2, Minimize2, 
   ExternalLink, Loader2, RefreshCw, List, Grid, Eye, Pencil,
-  ArrowLeft, FileCode, Table as TableIcon
+  ArrowLeft, FileCode, Table as TableIcon, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 const API_KEY = "AIzaSyDltPnR5hhwfDrjlwi7lS78R_kDIZbQpWo";
 const PROCEDURES_FOLDER_ID = "1PU8pLn43kH0fLy7gmCm_qt3B-2-CHqmr";
@@ -73,10 +75,22 @@ function getFileTypeBadge(mimeType: string) {
   return { label: "FILE", color: "bg-muted text-muted-foreground border-border" };
 }
 
-async function fetchFolderFiles(folderId: string): Promise<DriveItem[]> {
-  const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,mimeType,webViewLink,modifiedTime,createdTime,size)&orderBy=name&key=${API_KEY}&pageSize=100`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Failed to fetch folder");
+async function fetchFolderFiles(folderId: string, searchQuery: string = ""): Promise<DriveItem[]> {
+  let queryStr = `'${folderId}' in parents and trashed=false`;
+  if (searchQuery.trim()) {
+    queryStr += ` and fullText contains '${searchQuery.trim()}'`;
+  }
+  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(queryStr)}&fields=files(id,name,mimeType,webViewLink,modifiedTime,createdTime,size)&orderBy=name&key=${API_KEY}&pageSize=100`;
+  
+  const token = await getAccessToken();
+  const options: RequestInit = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Drive API error:", errText);
+    throw new Error("Failed to fetch folder");
+  }
   const data = await res.json();
   return data.files || [];
 }
@@ -89,9 +103,17 @@ export default function ProceduresPage() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [mode, setMode] = useState<"preview" | "edit">("preview");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([
     { id: PROCEDURES_FOLDER_ID, name: "02. Procedures" }
   ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     const handler = (e: CustomEvent) => setSidebarCollapsed(e.detail);
@@ -104,7 +126,7 @@ export default function ProceduresPage() {
   const loadFiles = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await fetchFolderFiles(currentFolderId);
+      const items = await fetchFolderFiles(currentFolderId, debouncedSearch);
       // Sort: folders first, then files alphabetically
       items.sort((a, b) => {
         const aFolder = a.mimeType.includes("folder") ? 0 : 1;
@@ -118,7 +140,7 @@ export default function ProceduresPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentFolderId]);
+  }, [currentFolderId, debouncedSearch]);
 
   useEffect(() => {
     loadFiles();
@@ -135,6 +157,7 @@ export default function ProceduresPage() {
     }
     const idx = nonFolderFiles.findIndex(f => f.id === file.id);
     setSelectedIndex(idx);
+    setMode("preview");
   };
 
   const goBack = () => {
@@ -144,10 +167,16 @@ export default function ProceduresPage() {
   };
 
   const goPrev = () => {
-    if (selectedIndex !== null && selectedIndex > 0) setSelectedIndex(selectedIndex - 1);
+    if (selectedIndex !== null && selectedIndex > 0) {
+      setSelectedIndex(selectedIndex - 1);
+      setMode("preview");
+    }
   };
   const goNext = () => {
-    if (selectedIndex !== null && selectedIndex < nonFolderFiles.length - 1) setSelectedIndex(selectedIndex + 1);
+    if (selectedIndex !== null && selectedIndex < nonFolderFiles.length - 1) {
+      setSelectedIndex(selectedIndex + 1);
+      setMode("preview");
+    }
   };
 
   // Keyboard navigation
@@ -170,31 +199,42 @@ export default function ProceduresPage() {
       <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
       <div className={cn("flex-1 flex flex-col transition-all duration-300", sidebarCollapsed ? "md:ml-[60px]" : "md:ml-60")}>
         <Header />
-        <main className="flex-1 p-4 md:p-6">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            {folderStack.length > 1 && (
-              <Button variant="ghost" size="sm" onClick={goBack} className="gap-1.5">
-                <ArrowLeft className="w-4 h-4" /> Back
-              </Button>
-            )}
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              {breadcrumb.map((name, i) => (
-                <span key={i} className="flex items-center gap-1">
-                  {i > 0 && <ChevronRight className="w-3 h-3" />}
-                  <span className={cn(i === breadcrumb.length - 1 ? "text-foreground font-semibold" : "cursor-pointer hover:text-foreground")}
-                    onClick={() => i < breadcrumb.length - 1 && setFolderStack(prev => prev.slice(0, i + 1))}
-                  >
-                    {name}
+        <main className="flex-1 flex flex-col p-4 md:p-6 min-h-0">
+          {/* Breadcrumb & Top Bar */}
+          <div className="flex justify-between items-start sm:items-center gap-3 mb-4 flex-col sm:flex-row">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              {folderStack.length > 1 && (
+                <Button variant="ghost" size="sm" onClick={goBack} className="gap-1.5">
+                  <ArrowLeft className="w-4 h-4" /> Back
+                </Button>
+              )}
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                {breadcrumb.map((name, i) => (
+                  <span key={i} className="flex items-center gap-1">
+                    {i > 0 && <ChevronRight className="w-3 h-3 shrink-0" />}
+                    <span className={cn(i === breadcrumb.length - 1 ? "text-foreground font-semibold truncate" : "cursor-pointer hover:text-foreground shrink-0")}
+                      onClick={() => i < breadcrumb.length - 1 && setFolderStack(prev => prev.slice(0, i + 1))}
+                    >
+                      {name}
+                    </span>
                   </span>
-                </span>
-              ))}
+                ))}
+              </div>
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={loadFiles} className="h-8 w-8">
+            <div className="flex items-center gap-2 w-full sm:w-auto mt-1 sm:mt-0 shrink-0">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search inside procedures..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-8 text-xs bg-muted/40"
+                />
+              </div>
+              <Button variant="ghost" size="icon" onClick={loadFiles} className="h-8 w-8 shrink-0">
                 <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")} className="h-8 w-8">
+              <Button variant="ghost" size="icon" onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")} className="h-8 w-8 shrink-0">
                 {viewMode === "list" ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
               </Button>
             </div>
@@ -202,7 +242,7 @@ export default function ProceduresPage() {
 
           {selectedFile ? (
             /* ===== FILE VIEWER ===== */
-            <div className={cn("flex flex-col", isFullscreen ? "fixed inset-0 z-50 bg-background p-4" : "")}>
+            <div className={cn("flex-1 flex flex-col min-h-0", isFullscreen ? "fixed inset-0 z-50 bg-background p-4" : "")}>
               {/* Viewer Header */}
               <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
@@ -213,10 +253,14 @@ export default function ProceduresPage() {
                     {getFileIcon(selectedFile.mimeType)}
                     <h2 className="text-sm font-semibold truncate">{selectedFile.name}</h2>
                     {(() => { const b = getFileTypeBadge(selectedFile.mimeType); return <Badge variant="outline" className={cn("text-[10px] shrink-0", b.color)}>{b.label}</Badge>; })()}
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 px-2.5 py-1 rounded-md ml-2 border border-border/50 shrink-0">
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Search Document (Ctrl+F)</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground mr-1">
                     {(selectedIndex ?? 0) + 1} / {nonFolderFiles.length}
                   </span>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={goPrev} disabled={selectedIndex === 0}>
@@ -225,8 +269,28 @@ export default function ProceduresPage() {
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={goNext} disabled={selectedIndex === nonFolderFiles.length - 1}>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => window.open(getEditUrl(selectedFile), '_blank')}>
-                    <Pencil className="w-4 h-4" />
+
+                  <div className="flex items-center rounded-lg border border-border overflow-hidden ml-1">
+                    <Button
+                      variant={mode === "preview" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setMode("preview")}
+                      className="rounded-none gap-1.5 h-8"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </Button>
+                    <Button
+                      variant={mode === "edit" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setMode("edit")}
+                      className="rounded-none gap-1.5 h-8"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </Button>
+                  </div>
+
+                  <Button variant="outline" size="icon" className="h-8 w-8 ml-1" onClick={() => window.open(getEditUrl(selectedFile), '_blank')}>
+                    <ExternalLink className="w-4 h-4" />
                   </Button>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setIsFullscreen(!isFullscreen)}>
                     {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -235,10 +299,10 @@ export default function ProceduresPage() {
               </div>
 
               {/* iframe Preview */}
-              <div className={cn("rounded-xl border border-border overflow-hidden bg-card flex-1", isFullscreen ? "h-[calc(100vh-80px)]" : "h-[calc(100vh-120px)]")}>
+              <div className="rounded-xl border border-border overflow-hidden bg-card flex-1 min-h-0">
                 <iframe
-                  key={selectedFile.id}
-                  src={getPreviewUrl(selectedFile)}
+                  key={`${selectedFile.id}-${mode}`}
+                  src={mode === "edit" ? getEditUrl(selectedFile) : getPreviewUrl(selectedFile)}
                   className="w-full h-full"
                   title={selectedFile.name}
                   sandbox="allow-scripts allow-same-origin allow-popups allow-forms"

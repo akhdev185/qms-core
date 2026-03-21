@@ -1,4 +1,6 @@
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
 export default async function handler(req, res) {
     const { code } = req.query;
@@ -47,11 +49,39 @@ export default async function handler(req, res) {
         const newRefreshToken = response.data.refresh_token;
 
         if (newRefreshToken) {
+            let localSaveMsg = '';
+            if (!process.env.VERCEL) {
+                try {
+                    const envPath = path.join(process.cwd(), '.env');
+                    let envContent = '';
+                    if (fs.existsSync(envPath)) {
+                        envContent = fs.readFileSync(envPath, 'utf8');
+                    } else {
+                        const examplePath = path.join(process.cwd(), '.env.example');
+                        if (fs.existsSync(examplePath)) {
+                            envContent = fs.readFileSync(examplePath, 'utf8');
+                        }
+                    }
+
+                    if (envContent.includes('GOOGLE_REFRESH_TOKEN=')) {
+                        envContent = envContent.replace(/GOOGLE_REFRESH_TOKEN=.*/, `GOOGLE_REFRESH_TOKEN=${newRefreshToken}`);
+                    } else {
+                        envContent += `\nGOOGLE_REFRESH_TOKEN=${newRefreshToken}\n`;
+                    }
+
+                    fs.writeFileSync(envPath, envContent);
+                    localSaveMsg = '<p style="color: #2e7d32; font-weight: bold;">✅ تم حفظ التوكن تلقائياً في ملف .env الخاص بك! لا داعي لنسخه يدوياً.</p>';
+                    console.log('DEBUG: Successfully saved Refresh Token to .env');
+                } catch (e) {
+                    console.error('DEBUG: Failed to save to .env:', e);
+                }
+            }
+
             res.send(`
                 <div style="font-family: sans-serif; padding: 20px; max-width: 800px; line-height: 1.6; direction: rtl; text-align: right;">
                     <h1 style="color: #0f5132;">✅ تم استخراج التوكن بنجاح!</h1>
-                    <p>بما أنك تستخدم Vercel (Serverless)، لا يمكننا حفظ التوكن تلقائياً.</p>
-                    <p><strong>يرجى نسخ هذا الكود وإضافته إلى متغيرات البيئة (Environment Variables) في إعدادات مشروع Vercel:</strong></p>
+                    ${localSaveMsg}
+                    <p>إذا كنت تستخدم Vercel للإنتاج (Production)، يرجى نسخ هذا الكود وإضافته إلى متغيرات البيئة في إعدادات المشروع:</p>
                     
                     <div style="background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 4px; overflow-x: auto; margin: 20px 0;">
                         <strong>Key:</strong> GOOGLE_REFRESH_TOKEN<br>
@@ -59,7 +89,7 @@ export default async function handler(req, res) {
                         <code style="background: #e9ecef; padding: 5px; display: block; margin-top: 5px; word-break: break-all;">${newRefreshToken}</code>
                     </div>
 
-                    <p>بعد إضافة المتغير، قم بإعادة نشر المشروع (Redeploy) ليعمل بشكل صحيح.</p>
+                    <p>بعد ذلك، قم بإعادة تشغيل السيرفر المحلي (Local Server) ليتعرف على التوكن الجديد.</p>
                 </div>
             `);
         } else {

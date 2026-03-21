@@ -54,7 +54,12 @@ export function getAllowedNextStatuses(currentStatus: RecordStatus): RecordStatu
 /**
  * Parse status from Google Sheets audit status field with priority to 'reviewed' flag
  */
-export function parseStatusFromAuditField(auditStatus: string, reviewed: boolean = false, hasFiles: boolean = false): RecordStatus {
+export function parseStatusFromAuditField(auditStatus: string, reviewed: boolean = false, hasFiles: boolean = false, metadata?: any): RecordStatus {
+    // 0. Priority: If metadata explicitly says 'rejected' from Automated Audit
+    if (metadata?.recordStatus === 'rejected') {
+        return 'rejected';
+    }
+
     // 1. Priority: If reviewed is true, it's definitely approved
     if (reviewed) {
         return 'approved';
@@ -108,9 +113,16 @@ export async function updateFileReview(
     reviewedBy: string,
     existingReviews: Record<string, any> = {}
 ): Promise<boolean> {
+    const existingFileReview = existingReviews[fileId] || {};
     const updatedReviews = {
         ...existingReviews,
-        [fileId]: { status, comment, reviewedBy, date: new Date().toISOString() }
+        [fileId]: { 
+            ...existingFileReview,
+            status, 
+            comment, 
+            reviewedBy, 
+            reviewDate: new Date().toISOString() 
+        }
     };
 
     return await updateSheetCell(
@@ -221,7 +233,7 @@ export function getStatusBadgeClass(status: RecordStatus): string {
 /**
  * Get status statistics from records
  */
-export function getStatusStats(records: { auditStatus: string }[]): {
+export function getStatusStats(records: any[]): {
     draft: number;
     pending_review: number;
     approved: number;
@@ -237,8 +249,21 @@ export function getStatusStats(records: { auditStatus: string }[]): {
     };
 
     records.forEach(record => {
-        const status = parseStatusFromAuditField(record.auditStatus);
-        stats[status]++;
+        // Priority 1: Check metadata JSON status if it exists
+        const metadataStatus = record.fileReviews?.recordStatus;
+        let status: RecordStatus;
+        
+        if (metadataStatus) {
+            status = metadataStatus as RecordStatus;
+        } else {
+            status = parseStatusFromAuditField(record.auditStatus, record.reviewed, (record.actualRecordCount || 0) > 0, record.fileReviews);
+        }
+        
+        if (stats[status] !== undefined) {
+            stats[status]++;
+        } else {
+            stats.draft++;
+        }
     });
 
     return stats;

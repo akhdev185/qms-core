@@ -42,18 +42,42 @@ export function EditMetadataModal({ isOpen, onClose, record, fileId, fileName, o
     const [comment, setComment] = useState(currentReview.comment || "");
     const [reviewedBy, setReviewedBy] = useState(currentReview.reviewedBy || "");
     const [reviewDate, setReviewDate] = useState(currentReview.reviewDate || new Date().toISOString().split('T')[0]);
+    
+    // New Metadata state
+    const [project, setProject] = useState(currentReview.project || "General / All Company");
+    const [targetMonth, setTargetMonth] = useState(currentReview.targetMonth || (new Date().getMonth() + 1).toString());
+    const [targetYear, setTargetYear] = useState(currentReview.targetYear || new Date().getFullYear().toString());
+
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
+
+    const PROJECTS = [
+        "General / All Company",
+        "Omniaz Project - Mapping",
+        "Omniaz Project - Annotation",
+        "Video Detection Project",
+        "Vocal AI Project",
+        "Tennis Project",
+        "ETH Project"
+    ];
+    
+    const MONTHS = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+    const currentYearNum = new Date().getFullYear();
+    const YEARS = Array.from({ length: 6 }, (_, i) => (currentYearNum - 1 + i).toString());
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
             const updatedReviews = { ...record.fileReviews };
             updatedReviews[fileId] = {
+                ...currentReview,
                 status,
                 comment,
                 reviewedBy,
-                reviewDate
+                reviewDate,
+                project,
+                targetMonth,
+                targetYear
             };
 
             // Column P is index 15, which is 'P'
@@ -128,6 +152,52 @@ export function EditMetadataModal({ isOpen, onClose, record, fileId, fileName, o
                             value={reviewedBy}
                             onChange={(e) => setReviewedBy(e.target.value)}
                         />
+                    </div>
+
+                    {/* New Metadata Fields */}
+                    <div className="pt-2 border-t border-border mt-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Project Assignment</Label>
+                            <Select value={project} onValueChange={setProject}>
+                                <SelectTrigger className="h-9">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PROJECTS.map(p => (
+                                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Target Month</Label>
+                                <Select value={targetMonth} onValueChange={setTargetMonth}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {MONTHS.map(m => (
+                                            <SelectItem key={m} value={m}>Month {m}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Target Year</Label>
+                                <Select value={targetYear} onValueChange={setTargetYear}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {YEARS.map(y => (
+                                            <SelectItem key={y} value={y}>{y}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-2">

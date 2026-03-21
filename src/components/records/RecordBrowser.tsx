@@ -203,10 +203,16 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
                                                             return <StatusBadge status={review.status as any} size="sm" />;
                                                         })()}
                                                     </div>
-                                                    <div className="text-[10px] text-muted-foreground flex items-center gap-2 font-medium">
-                                                        {serial && <span className="text-sidebar-primary font-mono">{serial}</span>}
+                                                    <div className="text-[10px] text-muted-foreground flex items-center gap-2 font-medium flex-wrap">
+                                                        {serial && <span className="text-sidebar-primary font-mono font-bold">{serial}</span>}
                                                         <span>•</span>
-                                                        <span>Added {formatTimeAgo(file.createdTime)}</span>
+                                                        <span className="bg-sidebar-primary/10 text-sidebar-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">
+                                                            {record.fileReviews?.[file.id]?.project || "General / All Company"}
+                                                        </span>
+                                                        <span>•</span>
+                                                        <span className="font-bold">M{record.fileReviews?.[file.id]?.targetMonth || (new Date(file.createdTime).getMonth() + 1)} / {record.fileReviews?.[file.id]?.targetYear || new Date(file.createdTime).getFullYear()}</span>
+                                                        <span>•</span>
+                                                        <span>{formatTimeAgo(file.createdTime)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -232,16 +238,35 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
                                         </div>
 
                                         {/* Audit Details */}
-                                        <div className="grid grid-cols-2 gap-4 px-3 py-2 bg-muted/20 rounded-lg border border-border/30">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-3 py-2 bg-muted/20 rounded-lg border border-border/30">
+                                            <div>
+                                                <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">Project</p>
+                                                <p className="text-[11px] font-bold text-sidebar-primary truncate">
+                                                    {record.fileReviews?.[file.id]?.project || "General"}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">Target Period</p>
+                                                <p className="text-[11px] font-bold">
+                                                    M{record.fileReviews?.[file.id]?.targetMonth || "—"} / {record.fileReviews?.[file.id]?.targetYear || "—"}
+                                                </p>
+                                            </div>
                                             <div>
                                                 <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">Reviewed By</p>
-                                                <p className="text-xs font-semibold">{record.fileReviews?.[file.id]?.reviewedBy || record.reviewedBy || "—"}</p>
+                                                <p className="text-[11px] font-bold truncate">{record.fileReviews?.[file.id]?.reviewedBy || record.reviewedBy || "—"}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">Review Date</p>
-                                                <p className="text-xs font-semibold">
-                                                    {record.fileReviews?.[file.id]?.reviewDate ? new Date(record.fileReviews[file.id].reviewDate).toLocaleDateString() : 
-                                                     record.reviewDate ? new Date(record.reviewDate).toLocaleDateString() : "—"}
+                                                <p className="text-[11px] font-bold">
+                                                    {(() => {
+                                                        const review = record.fileReviews?.[file.id];
+                                                        const rawDate = review?.reviewDate || review?.date || record.reviewDate;
+                                                        if (!rawDate) return "—";
+                                                        
+                                                        const d = new Date(rawDate);
+                                                        if (isNaN(d.getTime())) return rawDate; // Show raw string if parsing fails
+                                                        return d.toLocaleDateString();
+                                                    })()}
                                                 </p>
                                             </div>
                                         </div>

@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Maximize2, Minimize2, Eye, Pencil } from "lucide-react";
+import { ExternalLink, Maximize2, Minimize2, Eye, Pencil, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const DOC_ID = "1ZYwkf6Az3AVExhtfY5Dtj6p-U1Bof0Ao";
@@ -36,6 +36,10 @@ export default function ISOManualPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-bold">ISO 9001:2015 Manual</h1>
               <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20">POLICY</Badge>
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 px-2.5 py-1 rounded-md ml-2 border border-border/50">
+                <Search className="w-3.5 h-3.5" />
+                <span>Search Document (Ctrl+F)</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center rounded-lg border border-border overflow-hidden">

@@ -26,6 +26,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertCircle,
   AlertTriangle,
   Loader2,
   ChevronRight,
@@ -294,10 +295,28 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
                         </div>
                       ) : (
                         <>
-                          <p className="font-bold text-sm text-foreground tracking-tight">{record.recordName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-sm text-foreground tracking-tight">{record.recordName}</p>
+                            {record.fileReviews?.recordStatus === 'rejected' && (
+                                <Badge variant="destructive" className="h-4 text-[8px] px-1 uppercase gap-1">
+                                    <AlertTriangle className="w-2.5 h-2.5" />
+                                    Audit Issue
+                                </Badge>
+                            )}
+                          </div>
                           <p className="text-[10px] text-muted-foreground/70 line-clamp-1 font-medium italic">
                             {record.description}
                           </p>
+                          {record.fileReviews?.auditIssues?.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                                {record.fileReviews.auditIssues.map((issue: string, idx: number) => (
+                                    <span key={idx} className="text-[9px] bg-red-500/10 text-red-600 px-1.5 py-0.5 rounded border border-red-200/50 flex items-center gap-1">
+                                        <AlertCircle className="w-2.5 h-2.5" />
+                                        {issue}
+                                    </span>
+                                ))}
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
@@ -420,15 +439,22 @@ export function RecordsTable({ records, isLoading = false }: RecordsTableProps) 
 
                               return (
                                 <div key={file.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-3 bg-background/60 rounded-lg border border-border gap-3">
-                                  <div className="flex items-center gap-2 overflow-hidden min-w-[200px]">
+                                  <div className="flex items-center gap-2 overflow-hidden min-w-[200px] flex-1">
                                     <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                    <span className="text-sm truncate font-medium">{file.name}</span>
-                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => window.open(file.webViewLink, '_blank')}>
+                                    <div className="flex flex-col">
+                                      <span className="text-sm truncate font-medium">{file.name}</span>
+                                      <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-semibold text-sidebar-primary bg-sidebar-primary/10 px-1.5 py-0.5 rounded">{review.project || "General"}</span>
+                                        <span className="text-muted-foreground/50">|</span>
+                                        <span className="font-medium">M{review.targetMonth} / {review.targetYear}</span>
+                                      </div>
+                                    </div>
+                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0 self-start mt-0.5" onClick={() => window.open(file.webViewLink, '_blank')}>
                                       <ExternalLink className="w-3 h-3" />
                                     </Button>
                                   </div>
 
-                                  <div className="flex flex-1 items-center gap-2 w-full md:w-auto">
+                                  <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
                                     <Select
                                       value={review.status}
                                       onValueChange={(val) => handleFileReview(record, file.id, val as RecordStatus)}

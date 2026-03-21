@@ -1,5 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import authStart from '../api/auth/index.js';
 import authCallback from '../api/auth/callback.js';
 import tokenHandler from '../api/token.js';
@@ -9,6 +10,7 @@ app.disable('x-powered-by');
 dotenv.config();
 
 // Basic JSON parsing
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
