@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Settings, ClipboardCheck, ShoppingCart,
   GraduationCap, Lightbulb, Building2, ChevronRight, Shield, Archive,
   AlertTriangle, PanelLeftClose, PanelLeftOpen, LogOut, Menu, X,
-  Layers, Wrench, Activity
+  Layers, Wrench, Activity, BookOpen
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
