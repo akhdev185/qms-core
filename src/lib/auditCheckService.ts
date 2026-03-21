@@ -126,8 +126,17 @@ async function auditSingleRecord(
           } else {
             // Name Check
             if (!metadata.name.toLowerCase().includes(record.code.toLowerCase())) {
+              const suggestedTemplateName = `${record.code} - ${metadata.name.replace(/^[A-Z]+\/\d+\s*[-_]?\s*/i, '')}`;
               result.issues.push({ message: `Template name mismatch: "${metadata.name}" (expected code "${record.code}")`, severity: 'warning', phase: 1 });
               result.templateStatus = 'invalid';
+              
+              if (!result.suggestedFixes) result.suggestedFixes = [];
+              result.suggestedFixes.push({
+                id: templateId,
+                currentName: metadata.name,
+                suggestedName: suggestedTemplateName,
+                type: 'file'
+              });
             } else {
               result.templateStatus = 'valid';
             }
@@ -264,21 +273,33 @@ async function auditSingleRecord(
                   matchCount++;
                 } else {
                   badNames.push(f.name);
+                  // SUGGEST FIX: prepend code if missing
+                  if (!result.suggestedFixes) result.suggestedFixes = [];
+                  
+                  // Avoid double-prepending if it somehow has a variant but not exactly the right one
+                  const suggestedName = `${record.code} - ${f.name.replace(/^[A-Z]+\/\d+\s*[-_]?\s*/i, '')}`;
+                  
+                  result.suggestedFixes.push({
+                    id: f.id,
+                    currentName: f.name,
+                    suggestedName: suggestedName,
+                    type: 'file'
+                  });
                 }
               });
 
               if (matchCount === folderFiles.length) {
                 result.namingStatus = 'valid';
-              } else if (matchCount > 0) {
-                result.namingStatus = 'partial';
-                if (badNames.length <= 3) {
-                  result.issues.push({ message: `${badNames.length} file(s) don't follow naming convention: ${badNames.map(n => `"${n}"`).join(', ')}`, severity: 'info', phase: 3 });
+              } else if (matchCount > 0 || folderFiles.length > 0) {
+                result.namingStatus = matchCount > 0 ? 'partial' : 'invalid';
+                
+                if (badNames.length <= 5) {
+                  badNames.forEach(bn => {
+                    result.issues.push({ message: `File naming mismatch: "${bn}"`, severity: 'info', phase: 3 });
+                  });
                 } else {
                   result.issues.push({ message: `${badNames.length} of ${folderFiles.length} files don't follow naming convention (missing "${record.code}" in filename).`, severity: 'info', phase: 3 });
                 }
-              } else if (folderFiles.length > 0) {
-                result.namingStatus = 'invalid';
-                result.issues.push({ message: `None of the ${folderFiles.length} files follow the naming convention (expected "${record.code}" in filename).`, severity: 'warning', phase: 3 });
               }
 
               // Check for duplicate file names within the folder

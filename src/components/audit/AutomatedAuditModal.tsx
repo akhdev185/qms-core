@@ -36,6 +36,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
   const [liveIssueCount, setLiveIssueCount] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
+  const [fixProgress, setFixProgress] = useState<{ current: number; total: number; name: string } | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -60,6 +61,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
         setLiveIssueCount(0);
         setElapsedTime(0);
         setStartTimestamp(null);
+        setFixProgress(null);
       }, 300);
     }
   }, [isOpen]);
@@ -160,29 +162,38 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
     if (selectedFixes.size === 0 || !results) return;
     setIsFixing(true);
     let successCount = 0;
+    const totalToFix = selectedFixes.size;
 
     try {
       const fixesToApply = results.flatMap(r => r.suggestedFixes || [])
         .filter(f => selectedFixes.has(f.id));
 
-      for (const fix of fixesToApply) {
+      for (let i = 0; i < fixesToApply.length; i++) {
+        const fix = fixesToApply[i];
+        setFixProgress({ current: i + 1, total: totalToFix, name: fix.currentName });
+        
+        console.log(`[AUDIT-FIX] Renaming ${fix.type}: "${fix.currentName}" -> "${fix.suggestedName}"`);
         const success = await renameDriveFile(fix.id, fix.suggestedName);
         if (success) successCount++;
       }
 
       toast({
         title: "Renaming Complete",
-        description: `Successfully renamed ${successCount} items. Syncing with Drive...`
+        description: `Successfully renamed ${successCount} of ${totalToFix} items. Syncing with Drive...`
       });
 
+      setFixProgress(null);
       queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      // Wait for Drive propagation
+      await new Promise(resolve => setTimeout(resolve, 3000));
       setSelectedFixes(new Set());
       await handleStartAudit();
     } catch (error: any) {
+      console.error("[AUDIT-FIX] Error during automated fix:", error);
       toast({ title: "Fix Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsFixing(false);
+      setFixProgress(null);
     }
   };
 
@@ -515,9 +526,9 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
               </div>
 
               {/* Results List */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full w-full">
-                  <div className="p-6 space-y-3">
+              <div className="flex-1 min-h-[400px] overflow-hidden relative">
+                <ScrollArea className="absolute inset-0 w-full h-full">
+                  <div className="p-6 space-y-3 pb-12">
                   {filteredResults.length === 0 ? (
                     <div className="text-center p-12 bg-background rounded-xl border border-border">
                       <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
@@ -592,9 +603,9 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
                           </div>
 
                           {/* Card Body (collapsible) */}
-                          {!isCollapsed && !isCompliant && visibleIssues.length > 0 && (
+                          {!isCollapsed && !isCompliant && (
                             <div className="px-5 pb-4 pt-1 border-t border-border/50">
-                              <ul className="space-y-2">
+                              <ul className="space-y-3">
                                 {visibleIssues.map((issue, idx) => {
                                   const matchedFix = result.suggestedFixes?.find(f => issue.message.includes(f.currentName));
                                   return (
@@ -605,9 +616,9 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
                                       {severityBadge(issue.severity)}
                                       <Badge variant="outline" className="h-4 text-[7px] ml-1 opacity-50">P{issue.phase}</Badge>
 
-                                      {/* Suggested fix UI */}
+                                      {/* Suggested fix UI (inline) */}
                                       {matchedFix && (
-                                        <div className="mt-2 p-2 bg-background border border-border rounded flex items-center justify-between gap-3">
+                                        <div className="mt-2 p-2 bg-background border border-border rounded flex items-center justify-between gap-3 shadow-sm">
                                           <div className="flex items-center gap-2">
                                             <input
                                               type="checkbox"
@@ -615,12 +626,12 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
                                               onChange={() => toggleFixSelection(matchedFix.id)}
                                               className="w-4 h-4 accent-primary"
                                             />
-                                            <div className="text-xs">
+                                            <div className="text-[10px]">
                                               <span className="text-muted-foreground line-through block italic">{matchedFix.currentName}</span>
-                                              <span className="text-primary font-bold block mt-1">➜ {matchedFix.suggestedName}</span>
+                                              <span className="text-primary font-bold block mt-0.5 whitespace-pre-wrap">➜ {matchedFix.suggestedName}</span>
                                             </div>
                                           </div>
-                                          <Badge variant="outline" className="text-[9px] h-4">SUGGESTED NAME</Badge>
+                                          <Badge variant="outline" className="text-[8px] h-3.5 uppercase shrink-0">{matchedFix.type}</Badge>
                                         </div>
                                       )}
                                     </div>
@@ -628,15 +639,85 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
                                   );
                                 })}
                               </ul>
+
+                              {/* Orphaned Fixes (e.g., bulk naming) */}
+                              {(() => {
+                                const displayedFixIds = new Set(
+                                  visibleIssues
+                                    .map(issue => result.suggestedFixes?.find(f => issue.message.includes(f.currentName))?.id)
+                                    .filter(Boolean)
+                                );
+                                const orphanedFixes = result.suggestedFixes?.filter(f => !displayedFixIds.has(f.id)) || [];
+
+                                if (orphanedFixes.length > 0) {
+                                  return (
+                                    <div className="mt-4 pt-3 border-t border-dashed border-border/50">
+                                      <h5 className="text-[10px] font-bold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
+                                        <Zap className="w-3 h-3" /> Additional Recommended Actions
+                                      </h5>
+                                      <div className="space-y-2">
+                                        {orphanedFixes.map(fix => (
+                                          <div key={fix.id} className="p-2 bg-muted/30 border border-border rounded flex items-center justify-between gap-3">
+                                             <div className="flex items-center gap-2">
+                                              <input
+                                                type="checkbox"
+                                                checked={selectedFixes.has(fix.id)}
+                                                onChange={() => toggleFixSelection(fix.id)}
+                                                className="w-4 h-4 accent-primary"
+                                              />
+                                              <div className="text-[10px]">
+                                                <span className="text-muted-foreground line-through block italic truncate max-w-[200px]">{fix.currentName}</span>
+                                                <span className="text-primary font-bold block mt-0.5 whitespace-pre-wrap">➜ {fix.suggestedName}</span>
+                                              </div>
+                                            </div>
+                                            <Badge variant="outline" className="text-[8px] h-3.5 uppercase shrink-0">{fix.type}</Badge>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           )}
                         </div>
                       );
                     })
                   )}
-                </div>
+                  </div>
                 </ScrollArea>
               </div>
+
+              {/* Fix Progress Overlay */}
+              {isFixing && fixProgress && (
+                <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-sm flex items-center justify-center p-8">
+                  <div className="bg-card border border-border shadow-2xl rounded-2xl p-6 w-full max-w-md text-center space-y-4">
+                    <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
+                    <div className="space-y-1">
+                      <h4 className="font-bold">Applying Fixes...</h4>
+                      <p className="text-xs text-muted-foreground">Please do not close the window</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-300" 
+                          style={{ width: `${(fixProgress.current / fixProgress.total) * 100}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] font-mono font-bold">
+                        <span>{fixProgress.current} OF {fixProgress.total}</span>
+                        <span>{Math.round((fixProgress.current / fixProgress.total) * 100)}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-muted/50 rounded-lg text-xs font-mono truncate">
+                      Renaming: {fixProgress.name}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

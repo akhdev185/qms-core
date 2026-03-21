@@ -748,6 +748,7 @@ export async function renameDriveFile(fileId: string, newName: string): Promise<
   if (!token) throw new Error("No access token for Drive operations");
 
   try {
+    console.log(`[DRIVE] Renaming file ${fileId} to: "${newName}"`);
     const url = `${DRIVE_API_BASE}/files/${fileId}?key=${API_KEY}`;
     const response = await fetch(url, {
       method: 'PATCH',
@@ -760,13 +761,15 @@ export async function renameDriveFile(fileId: string, newName: string): Promise<
 
     if (!response.ok) {
       const err = await response.json();
-      console.error("Rename failed:", err);
+      console.error(`[DRIVE] Rename failed for ${fileId}:`, err);
       return false;
     }
 
+    const data = await response.json();
+    console.log(`[DRIVE] Rename successful for ${fileId}. New name: ${data.name}`);
     return true;
   } catch (error) {
-    console.error("Error renaming drive file:", error);
+    console.error(`[DRIVE] Network error renaming ${fileId}:`, error);
     return false;
   }
 }

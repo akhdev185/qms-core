@@ -561,46 +561,7 @@ export default function AuditPage() {
                       <p className="text-xs text-muted-foreground mt-1">All records are up to date</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-border">
-                      {overdueRecords.map(record => (
-                        <div
-                          key={record.rowIndex}
-                          className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/20 transition-colors cursor-pointer"
-                          onClick={() => {
-                            const mod = normalizeCategory(record.category);
-                            if (mod?.id) navigate(`/module/${mod.id}`);
-                          }}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                              <CalendarClock className="w-4 h-4 text-destructive" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono text-primary/70">{record.code}</span>
-                                <span className="text-xs font-semibold text-foreground truncate">{record.recordName}</span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-muted-foreground">{record.category}</span>
-                                {record.fillFrequency && (
-                                  <>
-                                    <span className="text-[10px] text-muted-foreground">·</span>
-                                    <span className="text-[10px] text-destructive font-semibold">Freq: {record.fillFrequency}</span>
-                                  </>
-                                )}
-                                {record.lastFileDate && (
-                                  <>
-                                    <span className="text-[10px] text-muted-foreground">·</span>
-                                    <span className="text-[10px] text-muted-foreground">Last: {record.lastFileDate}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-muted-foreground/30 flex-shrink-0" />
-                        </div>
-                      ))}
-                    </div>
+                  <RecordsTable records={overdueRecords} isLoading={isLoading} />
                   )}
                 </TabsContent>
 
@@ -613,50 +574,7 @@ export default function AuditPage() {
                       <p className="text-xs text-muted-foreground mt-1">No empty templates found</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-border">
-                      {neverFilledRecords.map(record => (
-                        <div
-                          key={record.rowIndex}
-                          className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/20 transition-colors cursor-pointer"
-                          onClick={() => navigate(`/record/${encodeURIComponent(record.code)}`)}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center flex-shrink-0">
-                              <FileX className="w-4 h-4 text-warning" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono text-primary/70">{record.code}</span>
-                                <span className="text-xs font-semibold text-foreground truncate">{record.recordName}</span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-muted-foreground">{record.category}</span>
-                                {record.description && (
-                                  <>
-                                    <span className="text-[10px] text-muted-foreground">·</span>
-                                    <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{record.description}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {record.templateLink && (
-                              <a
-                                href={record.templateLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[9px] font-semibold text-primary hover:underline"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                Template
-                              </a>
-                            )}
-                            <ArrowRight className="w-4 h-4 text-muted-foreground/30" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <RecordsTable records={neverFilledRecords} isLoading={isLoading} />
                   )}
                 </TabsContent>
               </Tabs>
