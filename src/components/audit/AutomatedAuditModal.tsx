@@ -172,7 +172,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
         const fix = fixesToApply[i];
         setFixProgress({ current: i + 1, total: totalToFix, name: fix.currentName });
         
-        console.log(`[AUDIT-FIX] Renaming ${fix.type}: "${fix.currentName}" -> "${fix.suggestedName}"`);
+        // console.log(`[AUDIT-FIX] Renaming ${fix.type}: "${fix.currentName}" -> "${fix.suggestedName}"`);
         const success = await renameDriveFile(fix.id, fix.suggestedName);
         if (success) successCount++;
       }

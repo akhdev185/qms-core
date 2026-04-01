@@ -64,6 +64,14 @@ export interface QMSRecord {
   daysUntilNextFill?: number;
   fillFrequency?: string;
   isOverdue?: boolean;
+  // Extended fields for atomic/file-based records
+  isAtomic?: boolean;
+  fileStatus?: RecordStatus;
+  fileReviewedBy?: string;
+  fileId?: string;
+  fileLink?: string;
+  googleDriveFileId?: string;
+  driveFileId?: string;
 }
 
 export interface ModuleStats {

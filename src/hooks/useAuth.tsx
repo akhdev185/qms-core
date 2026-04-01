@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // OPTIMISTIC: Use cached role immediately if valid to prevent UI flickering
     const cached = loadSession();
     if (cached && cached.userId === authUserId) {
-      console.log("[AUTH] Using cached role optimistically:", cached.role);
+      // console.log("[AUTH] Using cached role optimistically:", cached.role);
       setUser({
         id: authUserId,
         name: cached.displayName || email.split("@")[0] || "User",
@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isFetchingRef.current = authUserId;
 
     try {
-      console.log("[TRACE] Syncing profile & role for:", authUserId);
+      // console.log("[TRACE] Syncing profile & role for:", authUserId);
       const [profileRes, roleRes] = await withRetry(() => Promise.all([
         withTimeout<any>(supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle(), 15000),
         withTimeout<any>(supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle(), 15000),
@@ -266,10 +266,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const bootstrap = async () => {
-      console.log("[AUTH] Initializing session...");
+      // console.log("[AUTH] Initializing session...");
 
       if (!supabase || supabaseDisabled) {
-        console.log("[AUTH] Supabase disabled, using local fallback.");
+        // console.log("[AUTH] Supabase disabled, using local fallback.");
         const local = loadUsersLocal();
         const sessionData = loadSession();
         if (sessionData && local.length > 0) {
@@ -324,7 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 2. Set up listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[AUTH] Auth state change:", event);
+      // console.log("[AUTH] Auth state change:", event);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (mounted) await syncUserProfile(session);
       } else if (event === 'SIGNED_OUT') {
@@ -507,7 +507,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch { void 0; }
 
         if (!profileRow) {
-          console.log("[AUTH] Creating missing profile for", email);
+          // console.log("[AUTH] Creating missing profile for", email);
           const { error: upErr } = await supabase!.from("profiles").insert({
             id: crypto.randomUUID(),
             user_id: authUserId,
@@ -580,7 +580,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(u);
         saveSession(u.id, u.role, u.name);
         setSupabaseDisabled(false);
-        console.log("[AUTH] Supabase Login successful for:", email);
+        // console.log("[AUTH] Supabase Login successful for:", email);
         return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend };
 
       } catch (err) {
@@ -593,7 +593,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .maybeSingle();
 
           if (!pErr && prof && prof.password === password) {
-            console.log("[AUTH] Custom password column match found for:", email);
+            // console.log("[AUTH] Custom password column match found for:", email);
             const authUserId = prof.user_id || prof.id;
 
             let role = "user";
@@ -650,7 +650,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   const logout = React.useCallback(async () => {
-    console.log("[AUTH] Logging out user...");
+    // console.log("[AUTH] Logging out user...");
     if (supabase) {
       try {
         await supabase.auth.signOut();
@@ -674,7 +674,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       saveUsersLocal(updated);
     }
     if (supabase) {
-      console.log("[AUTH] addUser: inserting profile for", newUser.email);
+      // console.log("[AUTH] addUser: inserting profile for", newUser.email);
       const { error: profileErr } = await supabase.from("profiles").insert({
         id: newUser.id,
         user_id: newUser.id,
@@ -687,7 +687,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileErr) {
         console.error("[AUTH] addUser: profile insert FAILED:", profileErr);
       } else {
-        console.log("[AUTH] addUser: profile insert succeeded");
+        // console.log("[AUTH] addUser: profile insert succeeded");
       }
       try {
         const { error: roleErr } = await supabase.from("user_roles").insert({
@@ -698,7 +698,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (roleErr) {
           console.error("[AUTH] addUser: role insert FAILED:", roleErr);
         } else {
-          console.log("[AUTH] addUser: role insert succeeded");
+          // console.log("[AUTH] addUser: role insert succeeded");
         }
       } catch (e) {
         console.error("[AUTH] addUser: role insert exception:", e);
@@ -719,7 +719,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Crucial: Persistence for Local Auth Password Changes
     if (!AUTH_LOCAL_DISABLED) {
       saveUsersLocal(updated);
-      console.log("[AUTH] updateUser: Persisted change to Local Storage (including potentially password).");
+      // console.log("[AUTH] updateUser: Persisted change to Local Storage (including potentially password).");
     }
 
     if (user && user.id === id) {
@@ -745,7 +745,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Update Profiles
       if (Object.keys(payload).length > 0) {
-        console.log("[AUTH] updateUser: updating profiles for user_id", id, "payload:", payload);
+        // console.log("[AUTH] updateUser: updating profiles for user_id", id, "payload:", payload);
         const { error } = await supabase.from("profiles").update(payload).eq("user_id", id);
 
         if (error) {
@@ -761,7 +761,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Update Roles
       if (typeof updates.role === "string" && !failed) {
         const roleToSave = updates.role.toLowerCase();
-        console.log("[AUTH] updateUser: updating role to", roleToSave, "for user", id);
+        // console.log("[AUTH] updateUser: updating role to", roleToSave, "for user", id);
         try {
           // Check if it's one of the supported roles
           const validRoles = ["admin", "manager", "auditor", "user", "moderator"];
@@ -769,7 +769,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error("[AUTH] Invalid role rejected:", roleToSave);
             failed = true;
           } else {
-            console.log("[AUTH] updateUser: trying role upsert for", id, "to", roleToSave);
+            // console.log("[AUTH] updateUser: trying role upsert for", id, "to", roleToSave);
             const { error: roleErr } = await supabase.from("user_roles").upsert(
               { user_id: id, role: roleToSave },
               { onConflict: "user_id" }
@@ -818,7 +818,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       saveSession(null);
     }
     if (supabase) {
-      console.log("[AUTH] removeUser: deleting user", id);
+      // console.log("[AUTH] removeUser: deleting user", id);
       const { error: roleErr } = await supabase.from("user_roles").delete().eq("user_id", id);
       if (roleErr) console.error("[AUTH] removeUser: role delete FAILED:", roleErr);
       const { error: profErr } = await supabase.from("profiles").delete().eq("user_id", id);
@@ -837,7 +837,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, message: "خدمة المصادقة غير متوفرة" };
     }
     try {
-      console.log("[AUTH] resetPassword: sending reset email to", email);
+      // console.log("[AUTH] resetPassword: sending reset email to", email);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/login`,
       });
@@ -845,7 +845,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("[AUTH] resetPassword: FAILED:", error);
         return { ok: false, message: error.message };
       }
-      console.log("[AUTH] resetPassword: email sent successfully");
+      // console.log("[AUTH] resetPassword: email sent successfully");
       return { ok: true, message: `تم إرسال رابط إعادة تعيين كلمة المرور إلى ${email}` };
     } catch (e) {
       console.error("[AUTH] resetPassword: exception:", e);

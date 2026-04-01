@@ -25,7 +25,7 @@ export default function AuthCallback() {
         const refreshToken = params.get("refresh_token");
 
         if (accessToken && refreshToken) {
-          console.log("[AUTH-CALLBACK] Found tokens in URL, setting session via lovable integration...");
+          // console.log("[AUTH-CALLBACK] Found tokens in URL, setting session via lovable integration...");
           const result = await lovable.auth.callback({
             tokens: { access_token: accessToken, refresh_token: refreshToken }
           });
