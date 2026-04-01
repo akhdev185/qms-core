@@ -15,11 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertTriangle,
   Plus,
-  RefreshCw,
   Shield,
   TrendingUp,
   TrendingDown,
@@ -34,7 +32,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function RiskRegisterPage() {
   const navigate = useNavigate();
   const [activeModule, setActiveModule] = useState("risks");
-  const { risks, stats, isLoading, isError, error, refetch, addRisk, updateRisk, isAdding } = useRiskData();
+  const { risks, stats, isLoading, isError, error, addRisk, updateRisk, isAdding } = useRiskData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 

@@ -124,7 +124,7 @@ export default function AdminAccounts() {
   const activeUsers = users.filter(u => u.active);
 
   const filteredUsers = useMemo(() => {
-    let list = users.filter(u => {
+    const list = users.filter(u => {
       const matchesSearch = searchQuery === "" ||
         u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.email.toLowerCase().includes(searchQuery.toLowerCase());
