@@ -206,7 +206,7 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
                                                             {serial && <span className="text-[10px] font-mono font-bold bg-background/80 shadow-sm px-2 py-0.5 rounded-md border border-border/50">{serial}</span>}
                                                             {(() => {
                                                                 const review = record.fileReviews?.[file.id] || { status: 'pending_review' };
-                                                                return <StatusBadge status={review.status as any} size="sm" />;
+                                                                return <StatusBadge status={review.status} size="sm" />;
                                                             })()}
                                                             <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
                                                                 <CalendarDays className="w-3 h-3" />

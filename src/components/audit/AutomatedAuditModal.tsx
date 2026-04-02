@@ -112,7 +112,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
 
       const recordsToClear = cleanRecords.filter(cr => {
         const original = records.find(r => r.code === cr.recordCode);
-        const reviews = original?.fileReviews as any;
+        const reviews = original?.fileReviews;
         return reviews?.recordStatus === 'rejected';
       });
 
@@ -139,7 +139,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
       for (const res of recordsToClear) {
         const original = records.find(r => r.code === res.recordCode);
         if (!original) continue;
-        const currentReviews = { ...(original.fileReviews as any) };
+        const currentReviews = { ...(original.fileReviews) };
         delete currentReviews.recordStatus;
         delete currentReviews.auditIssues;
         currentReviews.lastAuditDate = new Date().toISOString();
@@ -743,7 +743,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
             )}
             {results && results.length > 0 && (results.some(r => r.suggestedStatus === 'rejected') || results.some(r => {
               const original = records.find(rec => rec.code === r.recordCode);
-              const reviews = original?.fileReviews as any;
+              const reviews = original?.fileReviews;
               return reviews?.recordStatus === 'rejected' && r.suggestedStatus === 'approved';
             })) && (
                 <Button

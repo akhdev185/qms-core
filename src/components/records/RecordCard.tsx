@@ -34,8 +34,8 @@ export function RecordCard({ record, onViewDetails, onDelete, onUpdateStatus, is
   };
 
   // Atomic records usually pass fileStatus instead of auditStatus
-  const isAtomic = (record as any).isAtomic;
-  const displayStatus = isAtomic ? ((record as any).fileStatus || "Pending") : (record.auditStatus || "Pending");
+  const isAtomic = record.isAtomic;
+  const displayStatus = isAtomic ? (record.fileStatus || "Pending") : (record.auditStatus || "Pending");
   
   const statusCfg = getStatusConfig(displayStatus);
   
@@ -89,7 +89,7 @@ export function RecordCard({ record, onViewDetails, onDelete, onUpdateStatus, is
             size="sm" 
             className="h-8 gap-1.5 text-xs bg-background" 
             onClick={() => {
-              const link = (record as any).fileLink || record.folderLink || record.templateLink;
+              const link = record.fileLink || record.folderLink || record.templateLink;
               if (link) window.open(link, '_blank');
             }}
           >
@@ -181,7 +181,7 @@ export function RecordCard({ record, onViewDetails, onDelete, onUpdateStatus, is
           <Button 
             className="flex-1 h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground gap-2 font-bold text-xs"
             onClick={() => {
-              const link = (record as any).fileLink || record.folderLink || record.templateLink;
+              const link = record.fileLink || record.folderLink || record.templateLink;
               if (link) window.open(link, '_blank');
             }}
           >

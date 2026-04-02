@@ -283,7 +283,7 @@ export function RiskRegisterTab() {
                                     <TableCell className="text-[10px] text-muted-foreground truncate max-w-[130px] hidden lg:table-cell" title={risk.actionControl}>{risk.actionControl || "—"}</TableCell>
                                     <TableCell className="text-xs font-medium">{risk.owner}</TableCell>
                                     <TableCell>
-                                        <Badge variant={getStatusColor(risk.status) as any} className="font-bold uppercase tracking-wider text-[8px]">{risk.status}</Badge>
+                                        <Badge variant={getStatusColor(risk.status)} className="font-bold uppercase tracking-wider text-[8px]">{risk.status}</Badge>
                                     </TableCell>
                                     <TableCell className="hidden md:table-cell">
                                         {linkedCapa ? (

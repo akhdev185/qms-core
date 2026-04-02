@@ -76,7 +76,7 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
   const [updatingRows, setUpdatingRows] = useState<Record<string, boolean>>({});
 
   const handleUpdateStatus = async (record: QMSRecord, status: RecordStatus) => {
-    const key = (record as any).isAtomic ? `file-${(record as any).fileId}` : `${record.rowIndex}-audit`;
+    const key = record.isAtomic ? `file-${record.fileId}` : `${record.rowIndex}-audit`;
     setUpdatingRows(prev => ({ ...prev, [key]: true }));
 
     try {
@@ -153,12 +153,12 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
       )}>
         {records.map((record: any) => (
           <RecordCard
-            key={(record as any).isAtomic ? `file-${(record as any).fileId}` : `${record.code}-${record.rowIndex}`}
+            key={record.isAtomic ? `file-${record.fileId}` : `${record.code}-${record.rowIndex}`}
             record={record}
             onViewDetails={(r) => navigate(`/module/${r.category.toLowerCase().replace(/\s+/g, '-')}`)}
             onDelete={handleDelete}
             onUpdateStatus={handleUpdateStatus}
-            isUpdating={updatingRows[(record as any).isAtomic ? `file-${(record as any).fileId}` : `${record.rowIndex}-audit`]}
+            isUpdating={updatingRows[record.isAtomic ? `file-${record.fileId}` : `${record.rowIndex}-audit`]}
             variant={variant}
           />
         ))}

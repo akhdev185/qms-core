@@ -125,13 +125,13 @@ export function FormDetailsModal({ record, open, onOpenChange, onViewInDrive }: 
           )}
 
           {/* Review Info */}
-          {((record as any).isAtomic
-            ? ((record as any).fileStatus === 'approved' || (record as any).fileStatus === 'rejected')
+          {(record.isAtomic
+            ? (record.fileStatus === 'approved' || record.fileStatus === 'rejected')
             : record.reviewed) && (
               <div className="bg-success/10 rounded-lg p-4">
                 <label className="text-sm font-medium text-success">Review Status</label>
                 <div className="text-sm text-success">
-                  Reviewed by {(record as any).isAtomic ? (record as any).fileReviewedBy : record.reviewedBy}
+                  Reviewed by {record.isAtomic ? record.fileReviewedBy : record.reviewedBy}
                   {record.reviewDate ? ` on ${record.reviewDate}` : ''}
                 </div>
               </div>

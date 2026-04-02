@@ -1,8 +1,13 @@
 // Status Management Service
 // Handles record status workflow and transitions
 
-import type { RecordStatus } from './googleSheets';
+import type { RecordStatus, QMSRecord } from './googleSheets';
 import { updateSheetCell } from './googleSheets';
+
+/** Minimal shape for record-like objects used in status operations */
+interface StatusRecord extends Pick<QMSRecord, 'rowIndex' | 'auditStatus' | 'reviewed' | 'fileReviews'> {
+    actualRecordCount?: number;
+}
 
 // Status workflow transitions
 const STATUS_TRANSITIONS: Record<RecordStatus, RecordStatus[]> = {
@@ -54,7 +59,7 @@ export function getAllowedNextStatuses(currentStatus: RecordStatus): RecordStatu
 /**
  * Parse status from Google Sheets audit status field with priority to 'reviewed' flag
  */
-export function parseStatusFromAuditField(auditStatus: string, reviewed: boolean = false, hasFiles: boolean = false, metadata?: any): RecordStatus {
+export function parseStatusFromAuditField(auditStatus: string, reviewed: boolean = false, hasFiles: boolean = false, metadata?: { recordStatus?: string }): RecordStatus {
     // 0. Priority: If metadata explicitly says 'rejected' from Automated Audit
     if (metadata?.recordStatus === 'rejected') {
         return 'rejected';
@@ -111,7 +116,7 @@ export async function updateFileReview(
     status: RecordStatus,
     comment: string,
     reviewedBy: string,
-    existingReviews: Record<string, any> = {}
+    existingReviews: Record<string, { status?: RecordStatus; comment?: string; reviewedBy?: string; reviewDate?: string }> = {}
 ): Promise<boolean> {
     const existingFileReview = existingReviews[fileId] || {};
     const updatedReviews = {
@@ -136,7 +141,7 @@ export async function updateFileReview(
  * Update record status in Google Sheets
  */
 export async function updateRecordStatus(
-    record: any, // Passing the whole record to handle metadata merging
+    record: StatusRecord, // Passing the whole record to handle metadata merging
     newStatus: RecordStatus,
     reviewedBy?: string
 ): Promise<boolean> {
@@ -179,7 +184,7 @@ export async function updateRecordStatus(
 }
 
 export async function bulkApproveRecords(
-    records: any[],
+    records: StatusRecord[],
     reviewedBy: string
 ): Promise<number> {
     let successCount = 0;
