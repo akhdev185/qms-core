@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: r.user_id || r.id,
         name: r.display_name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
         email: r.email || "",
-        password: r.password || "",
+        password: "", // SECURITY: Never expose password hashes to frontend
         role: (roleMap.get(r.user_id || r.id) || "user") as Role,
         active: !!(r.is_active ?? false),
         lastLoginAt: r.last_login ? new Date(r.last_login).getTime() : 0,
@@ -379,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: r.user_id || r.id,
               name: r.display_name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
               email: r.email || "",
-              password: r.password || "", // FIX: Load password from profile row
+              password: "", // SECURITY: Never expose password hashes to frontend
               role: role as Role,
               active: !!(r.is_active ?? false),
               lastLoginAt: lastLogin,
@@ -471,7 +471,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [users]);
 
   const login = React.useCallback(async (email: string, password: string): Promise<{ ok: boolean; code: string; message: string; user?: AppUser; backend: "supabase" | "local" }> => {
     const backend: "supabase" | "local" = supabase ? "supabase" : "local";
@@ -587,7 +587,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq("email", email)
             .maybeSingle();
 
-          if (!pErr && prof && prof.password === password) {
+          // SECURITY: Compare hashed password instead of plain text
+          const hashedInput = await hashPassword(password);
+          if (!pErr && prof && prof.password === hashedInput) {
             // console.log("[AUTH] Custom password column match found for:", email);
             const authUserId = prof.user_id || prof.id;
 
@@ -673,12 +675,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     if (supabase) {
       // console.log("[AUTH] addUser: inserting profile for", newUser.email);
+      // SECURITY: Hash password before storing in profiles table
       const { error: profileErr } = await supabase.from("profiles").insert({
         id: newUser.id,
         user_id: newUser.id,
         display_name: newUser.name,
         email: newUser.email,
-        password: newUser.password,
+        password: await hashPassword(newUser.password),
         is_active: !!newUser.active,
         last_login: null,
       });
@@ -732,7 +735,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (typeof updates.name === "string") payload.display_name = updates.name;
       if (typeof updates.email === "string") payload.email = updates.email;
-      if (typeof updates.password === "string") payload.password = updates.password;
+      // SECURITY: Do NOT store plain-text password in profiles table.
+      // Password changes go through the admin-update-password Edge Function instead.
+      // if (typeof updates.password === "string") payload.password = updates.password;
       if (typeof updates.active === "boolean") payload.is_active = updates.active;
       if (typeof updates.lastLoginAt === "number") payload.last_login = new Date(updates.lastLoginAt).toISOString();
 
