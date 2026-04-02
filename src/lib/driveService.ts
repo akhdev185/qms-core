@@ -521,7 +521,7 @@ export async function restoreFileFromArchive(
     const archiveParents = (fileData.parents || []).join(',');
 
     // 2. Move file back to originalParentId
-    const moveUrl = `${DRIVE_API_BASE}/files/${fileId}?addParents=${originalParentId}&removeParents=${archiveParents}&key=AIzaSyDltPnR5hhwfDrjlwi7lS78R_kDIZbQpWo`;
+    const moveUrl = `${DRIVE_API_BASE}/files/${fileId}?addParents=${originalParentId}&removeParents=${archiveParents}&key=${API_KEY}`;
     const moveResponse = await fetch(moveUrl, {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}` }
@@ -625,7 +625,7 @@ export async function listAllArchivedFiles(): Promise<DriveFile[]> {
   try {
     // Search for all folders named 'Archive'
     const folderQuery = "name = 'Archive' and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-    const folderUrl = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(folderQuery)}&fields=files(id)&key=AIzaSyDltPnR5hhwfDrjlwi7lS78R_kDIZbQpWo`;
+    const folderUrl = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(folderQuery)}&fields=files(id)&key=${API_KEY}`;
 
     const folderResponse = await fetch(folderUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -641,7 +641,7 @@ export async function listAllArchivedFiles(): Promise<DriveFile[]> {
     for (let i = 0; i < archiveFolderIds.length; i += chunkSize) {
       const chunk = archiveFolderIds.slice(i, i + chunkSize);
       const fileQuery = `(${chunk.map(id => `'${id}' in parents`).join(' or ')}) and trashed = false`;
-      const fileUrl = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(fileQuery)}&fields=files(id,name,mimeType,createdTime,modifiedTime,webViewLink,parents,description)&orderBy=createdTime desc&key=AIzaSyDltPnR5hhwfDrjlwi7lS78R_kDIZbQpWo`;
+      const fileUrl = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(fileQuery)}&fields=files(id,name,mimeType,createdTime,modifiedTime,webViewLink,parents,description)&orderBy=createdTime desc&key=${API_KEY}`;
 
       const fileResponse = await fetch(fileUrl, {
         headers: { 'Authorization': `Bearer ${token}` }

@@ -9,8 +9,8 @@
  * @iso ISO 9001:2015 Clause 4.4 - Quality management system and its processes
  */
 
-const API_KEY = "AIzaSyDltPnR5hhwfDrjlwi7lS78R_kDIZbQpWo";
-const SPREADSHEET_ID = "11dGB-fG2UMqsdqc182PsY-K6S_19FKc8bsZLHlic18M";
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || "";
+const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID || "";
 const SHEET_NAME = "Process Interaction Sheet";
 const SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
 
