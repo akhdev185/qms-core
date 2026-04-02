@@ -667,23 +667,22 @@ function calculateFillStats(frequencyStr: string, lastDateStr: string) {
  * Delete a record from the Google Sheet
  */
 export async function deleteRecord(rowIndex: number): Promise<void> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    throw new Error("No access token available. Please restart the OAuth server.");
+  }
+
   try {
-    // Get the current data to find the exact row
-    const response = await fetch(
-      `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/${SHEET_NAME}!A${rowIndex}:Z${rowIndex}?key=${API_KEY}`
-    );
+    const range = `'${SHEET_NAME}'!A${rowIndex}:Z${rowIndex}`;
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch row data for deletion');
-    }
-
-    // Clear the row by setting empty values
+    // Clear the row using authenticated request
     const clearResponse = await fetch(
-      `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/${SHEET_NAME}!A${rowIndex}:Z${rowIndex}?valueInputOption=RAW&key=${API_KEY}`,
+      `${SHEETS_API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           values: [['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']]
@@ -692,7 +691,9 @@ export async function deleteRecord(rowIndex: number): Promise<void> {
     );
 
     if (!clearResponse.ok) {
-      throw new Error('Failed to clear record from sheet');
+      const errorData = await clearResponse.json().catch(() => ({}));
+      const message = errorData.error?.message || clearResponse.statusText;
+      throw new Error(`Failed to clear record from sheet: ${message}`);
     }
   } catch (error) {
     console.error('Error deleting record:', error);

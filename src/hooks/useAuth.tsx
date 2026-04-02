@@ -61,7 +61,7 @@ function loadUsersLocal(): AppUser[] {
 function saveUsersLocal(users: AppUser[]) {
   try {
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  } catch { void 0; }
+  } catch { /* non-critical */ }
 }
 
 function loadSession(): { userId: string; role: Role; displayName?: string } | null {
@@ -99,7 +99,7 @@ function saveActivatedEmails(emails: string[]) {
   try {
     const norm = emails.map(e => e.toLowerCase());
     localStorage.setItem(ACTIVATED_KEY, JSON.stringify(norm));
-  } catch { void 0; }
+  } catch { /* non-critical */ }
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -365,7 +365,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             const { data: rolesData } = await supabase.from("user_roles").select("*");
             rolesRows = Array.isArray(rolesData) ? rolesData : [];
-          } catch { void 0; }
+          } catch { /* non-critical */ }
           const roleByUserId = new Map<string, string>();
           rolesRows.forEach((r: any) => {
             if (r && typeof r.user_id === "string" && typeof r.role === "string") {
@@ -499,7 +499,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq("user_id", authUserId)
             .maybeSingle();
           profileRow = profRows as ProfileRow;
-        } catch { void 0; }
+        } catch { /* non-critical */ }
 
         if (!profileRow) {
           // console.log("[AUTH] Creating missing profile for", email);
@@ -525,7 +525,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 user_id: authUserId,
                 role: "user",
               });
-            } catch { void 0; }
+            } catch { /* non-critical */ }
           }
         }
 
@@ -542,7 +542,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .eq("user_id", authUserId)
               .maybeSingle();
             if (rolesRows?.role) role = String(rolesRows.role).toLowerCase();
-          } catch { void 0; }
+          } catch { /* non-critical */ }
         }
 
         if (!is_active) {
@@ -601,7 +601,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .eq("user_id", authUserId)
                 .maybeSingle();
               if (rolesRows?.role) role = String(rolesRows.role).toLowerCase();
-            } catch { void 0; }
+            } catch { /* non-critical */ }
 
             const isActive = !!(prof.is_active ?? true);
             if (!isActive) return { ok: false, code: "inactive", message: "الحساب غير مفعل", backend };
