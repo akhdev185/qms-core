@@ -12,13 +12,14 @@ import { formatDistanceToNow } from "date-fns";
 interface RecordCardProps {
   record: QMSRecord;
   onViewDetails: (record: QMSRecord) => void;
-  onDelete: (rowIndex: number) => void;
+  onDeleteFile?: (fileId: string, rowIndex: number) => Promise<void>; // New: delete just the file from Drive
+  onDeleteRecord?: (rowIndex: number) => void; // Old: delete entire row from sheet
   onUpdateStatus: (record: QMSRecord, status: RecordStatus) => void;
   isUpdating?: boolean;
   variant?: "default" | "compact";
 }
 
-export function RecordCard({ record, onViewDetails, onDelete, onUpdateStatus, isUpdating, variant = "default" }: RecordCardProps) {
+export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord, onUpdateStatus, isUpdating, variant = "default" }: RecordCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Status mapping for visual cues
@@ -109,7 +110,7 @@ export function RecordCard({ record, onViewDetails, onDelete, onUpdateStatus, is
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            onClick={() => onDelete(record.rowIndex)}
+            onClick={() => onDeleteRecord?.(record.rowIndex)}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -218,11 +219,12 @@ export function RecordCard({ record, onViewDetails, onDelete, onUpdateStatus, is
               Folder
             </Button>
           )}
-          {/* Delete File */}
+          {/* Delete File from Drive (not from sheet) */}
           <Button 
             variant="ghost" 
             className="h-10 px-4 rounded-xl border border-border/40 text-destructive hover:bg-destructive/5 gap-2 font-bold text-xs"
-            onClick={() => onDelete(record.rowIndex)}
+            onClick={() => onDeleteFile?.(record.fileId || '', record.rowIndex)}
+            disabled={!record.fileId}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>

@@ -156,7 +156,19 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
             key={record.isAtomic ? `file-${record.fileId}` : `${record.code}-${record.rowIndex}`}
             record={record}
             onViewDetails={(r) => navigate(`/module/${r.category.toLowerCase().replace(/\s+/g, '-')}`)}
-            onDelete={handleDelete}
+            onDeleteFile={async (fileId, rowIndex) => {
+              if (!fileId) return;
+              if (!window.confirm("Delete this file from Drive? (Will remove from folder)")) return;
+              try {
+                const { deleteFileById } = await import("@/lib/driveService");
+                await deleteFileById(fileId);
+                toast({ title: "File Deleted", description: "File removed from Drive" });
+                queryClient.invalidateQueries({ queryKey: ["qms-data"] });
+              } catch (err: unknown) {
+                toast({ title: "Delete Failed", description: err.message, variant: "destructive" });
+              }
+            }}
+            onDeleteRecord={handleDelete}
             onUpdateStatus={handleUpdateStatus}
             isUpdating={updatingRows[record.isAtomic ? `file-${record.fileId}` : `${record.rowIndex}-audit`]}
             variant={variant}
