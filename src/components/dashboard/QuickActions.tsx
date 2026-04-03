@@ -116,7 +116,7 @@ export function QuickActions() {
       toast({ title: "تم إضافة الخطر", description: "تم تسجيل الخطر في Risk Register" });
       setRiskOpen(false);
       navigate("/risk-management");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: "فشل إضافة الخطر", description: e.message || "خطأ غير متوقع", variant: "destructive" });
     }
   };
@@ -138,7 +138,7 @@ export function QuickActions() {
       toast({ title: "تم تسجيل CAPA", description: "تم إضافة الإجراء في CAPA Register" });
       setCapaOpen(false);
       navigate("/risk-management");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: "فشل تسجيل CAPA", description: e.message || "خطأ غير متوقع", variant: "destructive" });
     }
   };
@@ -162,7 +162,7 @@ export function QuickActions() {
       } else {
         toast({ title: "فشل الرفع", description: "لم يتم رفع الملف", variant: "destructive" });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: "فشل الرفع", description: e.message || "خطأ غير متوقع", variant: "destructive" });
     }
   };
@@ -174,7 +174,7 @@ export function QuickActions() {
     try {
       await batchUpdateReviewedBy(records, "Ahmed khaled");
       toast({ title: "تم التحديث", description: "تم تعيين Ahmed khaled كمراجع لجميع السجلات" });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: "فشل التحديث", description: e.message, variant: "destructive" });
     } finally {
       setIsUpdatingReviewer(false);

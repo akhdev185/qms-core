@@ -29,126 +29,126 @@ type SortField = "name" | "email" | "role" | "lastLoginAt";
 type SortDir = "asc" | "desc";
 
 export default function AdminAccounts() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(localStorage.getItem('sidebarCollapsed') === 'true');
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(localStorage.getItem('sidebarCollapsed') === 'true'); // check if active
+  const [searchQuery, setSearchQuery] = useState(""); // check if active
+  const [filterRole, setFilterRole] = useState<string>("all"); // check if active
+  const [filterStatus, setFilterStatus] = useState<string>("all"); // check if active
+  const [sortField, setSortField] = useState<SortField>("name"); // check if active
+  const [sortDir, setSortDir] = useState<SortDir>("asc"); // check if active
 
   useEffect(() => {
     const handleToggle = (event: Event) => {
       const customEvent = event as CustomEvent<boolean>;
-      setSidebarCollapsed(customEvent.detail);
+      setSidebarCollapsed(customEvent.detail); // check if active
     };
-    window.addEventListener('qms-sidebar-toggle', handleToggle as EventListener);
-    return () => window.removeEventListener('qms-sidebar-toggle', handleToggle as EventListener);
-  }, []);
+    window.addEventListener('qms-sidebar-toggle', handleToggle as EventListener); // check if active
+    return () => window.removeEventListener('qms-sidebar-toggle', handleToggle as EventListener); // check if active
+  }, []); // check if active
 
-  const { users, addUser, updateUser, removeUser, resetPassword, user, reloadUsers } = useAuth();
-  const { toast } = useToast();
-  const [activeModule, setActiveModule] = useState("admin");
+  const { users, addUser, updateUser, removeUser, resetPassword, user, reloadUsers } = useAuth(); // check if active
+  const { toast } = useToast(); // check if active
+  const [activeModule, setActiveModule] = useState("admin"); // check if active
   const [newUser, setNewUser] = useState<{ name: string; email: string; role: AppUser["role"] }>({
     name: "", email: "", role: "user",
-  });
-  const [resettingPw, setResettingPw] = useState<Record<string, boolean>>({});
-  const [editState, setEditState] = useState<Record<string, Partial<AppUser>>>({});
-  const [savingRows, setSavingRows] = useState<Record<string, boolean>>({});
-  const [expandedUser, setExpandedUser] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  }); // check if active
+  const [resettingPw, setResettingPw] = useState<Record<string, boolean>>({}); // check if active
+  const [editState, setEditState] = useState<Record<string, Partial<AppUser>>>({}); // check if active
+  const [savingRows, setSavingRows] = useState<Record<string, boolean>>({}); // check if active
+  const [expandedUser, setExpandedUser] = useState<string | null>(null); // check if active
+  const [isRefreshing, setIsRefreshing] = useState(false); // check if active
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); // check if active
 
   const isProtectedAdmin = (u: AppUser): boolean => {
     const isSelf = user?.id === u.id;
-    const isBuiltInAdmin = u.role === "admin" && (u.email === "admin@local" || u.name.toLowerCase() === "administrator");
+    const isBuiltInAdmin = u.role === "admin" && (u.email === "admin@local" || u.name.toLowerCase() === "administrator"); // check if active
     return isSelf || isBuiltInAdmin;
   };
 
-  useEffect(() => { reloadUsers(); }, [reloadUsers]);
+  useEffect(() => { reloadUsers(); }, [reloadUsers]); // check if active
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await reloadUsers();
-    setIsRefreshing(false);
-    toast({ title: "Refreshed", description: "User list has been updated." });
+    setIsRefreshing(true); // check if active
+    await reloadUsers(); // check if active
+    setIsRefreshing(false); // check if active
+    toast({ title: "Refreshed", description: "User list has been updated." }); // check if active
   };
 
   const handleAdd = () => {
     if (!newUser.name || !newUser.email) return;
     // Generate a random temporary password (user must change on first login)
-    const tempPassword = crypto.randomUUID().slice(0, 12).replace(/-/g, "");
-    addUser({ name: newUser.name, email: newUser.email, role: newUser.role, password: tempPassword, active: user?.role === "admin", needsApprovalNotification: false });
-    setNewUser({ name: "", email: "", role: "user" });
-    toast({ title: "✅ Account Created", description: `${newUser.name} created. Temporary password: ${tempPassword}` });
+    const tempPassword = crypto.randomUUID().slice(0, 12).replace(/-/g, ""); // check if active
+    addUser({ name: newUser.name, email: newUser.email, role: newUser.role, password: tempPassword, active: user?.role === "admin", needsApprovalNotification: false }); // check if active
+    setNewUser({ name: "", email: "", role: "user" }); // check if active
+    toast({ title: "✅ Account Created", description: `${newUser.name} created. Temporary password: ${tempPassword}` }); // check if active
   };
 
   const handleRowEdit = (userId: string, field: keyof AppUser, value: any) => {
-    setEditState(prev => ({ ...prev, [userId]: { ...(prev[userId] || {}), [field]: value } }));
+    setEditState(prev => ({ ...prev, [userId]: { ...(prev[userId] || {}), [field]: value } })); // check if active
   };
 
   const handleSave = async (u: AppUser) => {
     const updates = editState[u.id];
     if (!updates || Object.keys(updates).length === 0) {
-      toast({ title: "No Changes", description: "No data was modified." });
+      toast({ title: "No Changes", description: "No data was modified." }); // check if active
       return;
     }
-    setSavingRows(prev => ({ ...prev, [u.id]: true }));
+    setSavingRows(prev => ({ ...prev, [u.id]: true })); // check if active
     try {
       if (updates.password && typeof updates.password === "string" && updates.password.trim().length > 0) {
-        const newPassword = updates.password.trim();
+        const newPassword = updates.password.trim(); // check if active
         if (newPassword.length < 6) {
-          toast({ title: "❌ Error", description: "Password must be at least 6 characters.", variant: "destructive" });
-          setSavingRows(prev => ({ ...prev, [u.id]: false }));
+          toast({ title: "❌ Error", description: "Password must be at least 6 characters.", variant: "destructive" }); // check if active
+          setSavingRows(prev => ({ ...prev, [u.id]: false })); // check if active
           return;
         }
         const { data, error } = await supabase.functions.invoke("admin-update-password", {
           body: { target_user_id: u.id, new_password: newPassword },
-        });
+        }); // check if active
         if (error || (data && data.error)) {
-          toast({ title: "❌ Password Change Failed", description: data?.error || error?.message || "Failed", variant: "destructive" });
-          setSavingRows(prev => ({ ...prev, [u.id]: false }));
+          toast({ title: "❌ Password Change Failed", description: data?.error || error?.message || "Failed", variant: "destructive" }); // check if active
+          setSavingRows(prev => ({ ...prev, [u.id]: false })); // check if active
           return;
         }
-        toast({ title: "✅ Password Changed", description: `Password for ${u.name} has been updated.` });
+        toast({ title: "✅ Password Changed", description: `Password for ${u.name} has been updated.` }); // check if active
       }
       const otherUpdates = { ...updates }; delete otherUpdates.password;
-      if (Object.keys(otherUpdates).length > 0) await updateUser(u.id, otherUpdates);
-      toast({ title: "✅ Saved", description: `${updates.name || u.name} has been updated.` });
-      setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; });
+      if (Object.keys(otherUpdates).length > 0) await updateUser(u.id, otherUpdates); // check if active
+      toast({ title: "✅ Saved", description: `${updates.name || u.name} has been updated.` }); // check if active
+      setEditState(prev => { const s = { ...prev }; delete s[u.id]; return s; }); // check if active
     } catch {
-      toast({ title: "❌ Error", description: "Update failed. Please try again.", variant: "destructive" });
+      toast({ title: "❌ Error", description: "Update failed. Please try again.", variant: "destructive" }); // check if active
     } finally {
-      setSavingRows(prev => ({ ...prev, [u.id]: false }));
+      setSavingRows(prev => ({ ...prev, [u.id]: false })); // check if active
     }
   };
 
-  const pendingUsers = users.filter(u => !u.active);
-  const activeUsers = users.filter(u => u.active);
+  const pendingUsers = users.filter(u => !u.active); // check if active
+  const activeUsers = users.filter(u => u.active); // check if active
 
   const filteredUsers = useMemo(() => {
     const list = users.filter(u => {
       const matchesSearch = searchQuery === "" ||
         u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase());
+        u.email.toLowerCase().includes(searchQuery.toLowerCase()); // check if active
       const matchesRole = filterRole === "all" || u.role === filterRole;
       const matchesStatus = filterStatus === "all" ||
         (filterStatus === "active" && u.active) ||
-        (filterStatus === "inactive" && !u.active);
+        (filterStatus === "inactive" && !u.active); // check if active
       return matchesSearch && matchesRole && matchesStatus;
-    });
+    }); // check if active
     list.sort((a, b) => {
       let cmp = 0;
-      if (sortField === "name") cmp = a.name.localeCompare(b.name);
-      else if (sortField === "email") cmp = a.email.localeCompare(b.email);
-      else if (sortField === "role") cmp = a.role.localeCompare(b.role);
-      else if (sortField === "lastLoginAt") cmp = (a.lastLoginAt || 0) - (b.lastLoginAt || 0);
+      if (sortField === "name") cmp = a.name.localeCompare(b.name); // check if active
+      else if (sortField === "email") cmp = a.email.localeCompare(b.email); // check if active
+      else if (sortField === "role") cmp = a.role.localeCompare(b.role); // check if active
+      else if (sortField === "lastLoginAt") cmp = (a.lastLoginAt || 0) - (b.lastLoginAt || 0); // check if active
       return sortDir === "asc" ? cmp : -cmp;
-    });
+    }); // check if active
     return list;
-  }, [users, searchQuery, filterRole, filterStatus, sortField, sortDir]);
+  }, [users, searchQuery, filterRole, filterStatus, sortField, sortDir]); // check if active
 
   const toggleSort = (field: SortField) => {
-    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc"); // check if active
     else { setSortField(field); setSortDir("asc"); }
   };
 
@@ -159,35 +159,35 @@ export default function AdminAccounts() {
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      const next = new Set(prev); // check if active
+      next.has(id) ? next.delete(id) : next.add(id); // check if active
       return next;
-    });
+    }); // check if active
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredUsers.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(filteredUsers.map(u => u.id)));
+    if (selectedIds.size === filteredUsers.length) setSelectedIds(new Set()); // check if active
+    else setSelectedIds(new Set(filteredUsers.map(u => u.id))); // check if active
   };
 
   const handleBulkActivate = async () => {
     const count = selectedIds.size;
     for (const id of selectedIds) {
-      const u = users.find(x => x.id === id);
-      if (u && !u.active) await updateUser(id, { active: true });
+      const u = users.find(x => x.id === id); // check if active
+      if (u && !u.active) await updateUser(id, { active: true }); // check if active
     }
-    setSelectedIds(new Set());
-    toast({ title: "✅ Activated", description: `${count} account(s) activated.` });
+    setSelectedIds(new Set()); // check if active
+    toast({ title: "✅ Activated", description: `${count} account(s) activated.` }); // check if active
   };
 
   const handleBulkDeactivate = async () => {
     const count = selectedIds.size;
     for (const id of selectedIds) {
-      const u = users.find(x => x.id === id);
-      if (u && u.active && !isProtectedAdmin(u)) await updateUser(id, { active: false });
+      const u = users.find(x => x.id === id); // check if active
+      if (u && u.active && !isProtectedAdmin(u)) await updateUser(id, { active: false }); // check if active
     }
-    setSelectedIds(new Set());
-    toast({ title: "Deactivated", description: "Selected accounts have been deactivated." });
+    setSelectedIds(new Set()); // check if active
+    toast({ title: "Deactivated", description: "Selected accounts have been deactivated." }); // check if active
   };
 
   const handleExportCSV = () => {
@@ -196,14 +196,14 @@ export default function AdminAccounts() {
       u.name, u.email, u.role,
       u.active ? "Active" : "Inactive",
       u.lastLoginAt ? new Date(u.lastLoginAt).toISOString() : "Never"
-    ]);
-    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "users_export.csv"; a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Exported", description: `${filteredUsers.length} users exported.` });
+    ]); // check if active
+    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n"); // check if active
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" }); // check if active
+    const url = URL.createObjectURL(blob); // check if active
+    const a = document.createElement("a"); // check if active
+    a.href = url; a.download = "users_export.csv"; a.click(); // check if active
+    URL.revokeObjectURL(url); // check if active
+    toast({ title: "Exported", description: `${filteredUsers.length} users exported.` }); // check if active
   };
 
   const stats = [
@@ -507,10 +507,10 @@ export default function AdminAccounts() {
                               <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
                                 onClick={async () => {
                                   if (window.confirm(`Send password reset link to ${u.email}?`)) {
-                                    setResettingPw(prev => ({ ...prev, [u.id]: true }));
-                                    const res = await resetPassword(u.email);
-                                    setResettingPw(prev => ({ ...prev, [u.id]: false }));
-                                    toast({ title: res.ok ? "✅ Link Sent" : "❌ Error", description: res.message, variant: res.ok ? "default" : "destructive" });
+                                    setResettingPw(prev => ({ ...prev, [u.id]: true })); // check if active
+                                    const res = await resetPassword(u.email); // check if active
+                                    setResettingPw(prev => ({ ...prev, [u.id]: false })); // check if active
+                                    toast({ title: res.ok ? "✅ Link Sent" : "❌ Error", description: res.message, variant: res.ok ? "default" : "destructive" }); // check if active
                                   }
                                 }} disabled={resettingPw[u.id]}>
                                 {resettingPw[u.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />} Send Reset Link
@@ -525,7 +525,7 @@ export default function AdminAccounts() {
                         </div>
                       )}
                     </div>
-                  );
+                  ); // check if active
                 })}
               </div>
             </CardContent>
@@ -534,5 +534,5 @@ export default function AdminAccounts() {
         <Footer />
       </main>
     </div>
-  );
+  ); // check if active
 }

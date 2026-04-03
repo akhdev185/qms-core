@@ -88,7 +88,7 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
       } else {
         throw new Error("Update failed");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: "Update Failed",
         description: err.message || "Google Sheets rejected the write operation.",
@@ -105,7 +105,7 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
       await deleteRecord.mutateAsync(rowIndex);
       toast({ title: "Record Deleted" });
       queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
     }
   };

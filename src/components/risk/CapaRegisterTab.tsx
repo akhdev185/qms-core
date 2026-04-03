@@ -331,7 +331,7 @@ export function CapaRegisterTab() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</Label>
-                                    <Select value={editingCapa.type} onValueChange={(val: any) => setEditingCapa({ ...editingCapa, type: val })}>
+                                    <Select value={editingCapa.type} onValueChange={(val: string) => setEditingCapa({ ...editingCapa, type: val })}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Corrective">Corrective</SelectItem>
@@ -371,7 +371,7 @@ export function CapaRegisterTab() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</Label>
-                                    <Select value={editingCapa.status} onValueChange={(val: any) => setEditingCapa({ ...editingCapa, status: val })}>
+                                    <Select value={editingCapa.status} onValueChange={(val: string) => setEditingCapa({ ...editingCapa, status: val })}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Open">Open</SelectItem>

@@ -609,7 +609,7 @@ export async function checkDriveWritePermission(): Promise<{ success: boolean; m
 
     return { success: true, message: "Write permission verified successfully." };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Drive permission check failed:", error);
     return { success: false, message: `Network or API error: ${error.message}` };
   }
@@ -631,7 +631,7 @@ export async function listAllArchivedFiles(): Promise<DriveFile[]> {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const folderData = await folderResponse.json();
-    const archiveFolderIds = (folderData.files || []).map((f: any) => f.id);
+    const archiveFolderIds = (folderData.files || []).map((f: unknown) => f.id);
 
     if (archiveFolderIds.length === 0) return [];
 
@@ -698,7 +698,7 @@ export async function createDriveFolder(name: string, parentFolderId?: string): 
   const token = await getAccessToken();
   if (!token) throw new Error("No access token for Drive operations");
   const url = `${DRIVE_API_BASE}/files?key=${API_KEY}`;
-  const body: any = { name, mimeType: "application/vnd.google-apps.folder" };
+  const body: unknown = { name, mimeType: "application/vnd.google-apps.folder" };
   if (parentFolderId) body.parents = [parentFolderId];
   const res = await fetch(url, {
     method: "POST",
@@ -721,7 +721,7 @@ export async function uploadFileToDrive(file: File, folderLink?: string, nameOve
     const fid = extractFolderId(folderLink);
     if (fid) parentId = fid;
   }
-  const metadata: any = {};
+  const metadata: unknown = {};
   if (nameOverride) metadata.name = nameOverride;
   if (parentId) metadata.parents = [parentId];
   const form = new FormData();

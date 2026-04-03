@@ -136,7 +136,7 @@ export default function ModulePage() {
     if (!filteredRecords) return [];
 
     // Sort all files across all forms by creation date
-    const allFiles: any[] = [];
+    const allFiles: unknown[] = [];
     filteredRecords.forEach(record => {
       (record.files || []).forEach(file => {
         allFiles.push({
@@ -153,9 +153,9 @@ export default function ModulePage() {
 
   // Group flattened files by their parent form code
   const groupedModuleFiles = useMemo(() => {
-    const groups: Record<string, { record: QMSRecord, files: any[] }> = {};
+    const groups: Record<string, { record: QMSRecord, files: unknown[] }> = {};
 
-    moduleFiles.forEach((file: any) => {
+    moduleFiles.forEach((file: unknown) => {
       const code = file.parentRecord.code;
       if (!groups[code]) {
         groups[code] = {
@@ -478,7 +478,7 @@ export default function ModulePage() {
                               {isExpanded ? (
                                 <div className="p-4 space-y-3 bg-muted/5 flex-1 animate-in fade-in slide-in-from-top-2 duration-200">
                                   <div className="space-y-3">
-                                    {group.files.map((file: any) => (
+                                    {group.files.map((file: unknown) => (
                                       <RecordBrowser
                                         key={file.id}
                                         record={{

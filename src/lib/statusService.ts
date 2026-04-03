@@ -206,7 +206,7 @@ export async function bulkApproveRecords(
  * @returns Number of successfully rejected records
  */
 export async function bulkRejectRecords(
-    records: any[],
+    records: unknown[],
     reviewedBy: string
 ): Promise<number> {
     let successCount = 0;
@@ -238,7 +238,7 @@ export function getStatusBadgeClass(status: RecordStatus): string {
 /**
  * Get status statistics from records
  */
-export function getStatusStats(records: any[]): {
+export function getStatusStats(records: unknown[]): {
     draft: number;
     pending_review: number;
     approved: number;

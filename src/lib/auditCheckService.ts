@@ -342,7 +342,7 @@ async function auditSingleRecord(
       result.issues.push({ message: "Missing folder link.", severity: 'critical', phase: 1 });
     }
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     result.error = err.message || "Unknown error";
     result.issues.push({ message: `Drive API error: ${result.error}`, severity: 'critical', phase: 1 });
   }

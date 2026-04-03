@@ -383,7 +383,7 @@ export function RiskRegisterTab() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</Label>
-                                    <Select value={editingRisk.status} onValueChange={(val: any) => setEditingRisk({ ...editingRisk, status: val })}>
+                                    <Select value={editingRisk.status} onValueChange={(val: string) => setEditingRisk({ ...editingRisk, status: val })}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Open">Open</SelectItem>
@@ -459,7 +459,7 @@ export function RiskRegisterTab() {
 
                         <div className="space-y-2">
                             <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</Label>
-                            <Select value={newCAPAData.type} onValueChange={(val: any) => setNewCAPAData({ ...newCAPAData, type: val })}>
+                            <Select value={newCAPAData.type} onValueChange={(val: string) => setNewCAPAData({ ...newCAPAData, type: val })}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Corrective">Corrective</SelectItem>

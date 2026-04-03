@@ -57,7 +57,7 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
             });
             await loadFiles();
             queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-        } catch (err: any) {
+        } catch (err: unknown) {
             toast({
                 title: "Archive Failed",
                 description: err.message || "Failed to archive record",

@@ -57,7 +57,7 @@ export interface QMSRecord {
   // New field: actual count from Drive folder
   actualRecordCount?: number;
   // New field: individual file reviews (from Column P)
-  fileReviews?: Record<string, { status: RecordStatus; comment: string; reviewedBy?: string; reviewDate?: string; date?: string; project?: string; targetMonth?: string; targetYear?: string; [key: string]: any }>;
+  fileReviews?: Record<string, { status: RecordStatus; comment: string; reviewedBy?: string; reviewDate?: string; date?: string; project?: string; targetMonth?: string; targetYear?: string; [key: string]: unknown }>;
   // New field: actual files from Drive
   files?: DriveFile[];
   // New field: days remaining until next required fill
@@ -215,7 +215,7 @@ export async function fetchSheetData(): Promise<QMSRecord[]> {
     }
 
     // Parse file reviews from Column P (index 15)
-    let fileReviews: any = {};
+    let fileReviews: unknown = {};
     if (row[15]) {
       try {
         fileReviews = JSON.parse(row[15]);
@@ -392,7 +392,7 @@ export async function updateSheetCell(
     }
 
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating cell:", error);
     throw error; // Propagate the error so UI can show message
   }

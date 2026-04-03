@@ -9,7 +9,7 @@ export interface AppNotification {
     created_at: string;
     read: boolean;
     link?: string;
-    data?: any;
+    data?: unknown;
     created_by?: string;
 }
 
@@ -59,7 +59,7 @@ export function useNotifications() {
         title: string;
         message: string;
         link?: string;
-        data?: any;
+        data?: unknown;
         targetUserIds: string[]; // who should receive it
     }) => {
         const { data: { user } } = await supabase.auth.getUser();

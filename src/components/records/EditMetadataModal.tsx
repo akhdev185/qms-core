@@ -95,7 +95,7 @@ export function EditMetadataModal({ isOpen, onClose, record, fileId, fileName, o
                 onSuccess();
                 onClose();
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: "Update Failed",
                 description: error.message || "Could not save changes to Google Sheets",

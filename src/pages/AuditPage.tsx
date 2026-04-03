@@ -86,7 +86,7 @@ export default function AuditPage() {
   };
 
   // Bulk status change: updates all files in a tab to a new status
-  const handleBulkStatusChange = useCallback(async (items: any[], newStatus: string) => {
+  const handleBulkStatusChange = useCallback(async (items: unknown[], newStatus: string) => {
     if (items.length === 0) return;
     setBulkLoading(true);
     const reviewerName = user?.name || user?.email || "System";
@@ -122,7 +122,7 @@ export default function AuditPage() {
         description: `${successCount} files changed to "${newStatus}"`,
       });
       queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({ title: "Bulk Update Failed", description: error.message, variant: "destructive" });
     } finally {
       setBulkLoading(false);
@@ -178,7 +178,7 @@ export default function AuditPage() {
           description: `${successCount} records restored successfully`,
         });
         queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({ title: "Import Failed", description: error.message, variant: "destructive" });
       } finally {
         setBulkLoading(false);
@@ -203,7 +203,7 @@ export default function AuditPage() {
     records.forEach(r => {
       if (r.category) cats.add(r.category);
       if (r.fileReviews) {
-        Object.values(r.fileReviews).forEach((review: any) => {
+        Object.values(r.fileReviews).forEach((review: unknown) => {
           if (review.project) projs.add(review.project);
           if (review.targetYear) yrs.add(review.targetYear.toString());
         });
@@ -226,7 +226,7 @@ export default function AuditPage() {
     };
 
     const searchLower = search.toLowerCase();
-    const matchesSearch = (r: any) => {
+    const matchesSearch = (r: unknown) => {
       if (!search) return true;
       return (
         r.code?.toLowerCase().includes(searchLower) ||
@@ -235,11 +235,11 @@ export default function AuditPage() {
         r.fileName?.toLowerCase().includes(searchLower)
       );
     };
-    const matchesCategory = (r: any) => categoryFilter === "all" || r.category === categoryFilter;
+    const matchesCategory = (r: unknown) => categoryFilter === "all" || r.category === categoryFilter;
 
-    const pending: any[] = [];
-    const compliant: any[] = [];
-    const issuesList: any[] = [];
+    const pending: unknown[] = [];
+    const compliant: unknown[] = [];
+    const issuesList: unknown[] = [];
 
     records.forEach(record => {
       const files = record.files || [];
@@ -355,7 +355,7 @@ export default function AuditPage() {
     const headers = isAtomic
       ? ["Code", "Record Name", "Category", "File Name", "Status", "Reviewed By"]
       : ["Code", "Record Name", "Category", "Description", "Last Filed", "Frequency"];
-    const rows = currentTabData.map((r: any) =>
+    const rows = currentTabData.map((r: unknown) =>
       isAtomic
         ? [r.code, r.recordName, r.category, r.fileName || "", r.fileStatus || "", r.fileReviewedBy || ""]
         : [r.code, r.recordName, r.category, r.description || "", r.lastFileDate || "", r.fillFrequency || ""]

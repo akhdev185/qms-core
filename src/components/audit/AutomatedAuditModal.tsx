@@ -150,7 +150,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
       toast({ title: "Dashboard Synchronized", description: `Updated ${updatedCount} forms with latest audit findings.` });
       queryClient.invalidateQueries({ queryKey: ["qms-data"] });
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to apply audit results:", error);
       toast({ title: "Sync Failed", description: error.message, variant: "destructive" });
     } finally {
@@ -188,7 +188,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
       await new Promise(resolve => setTimeout(resolve, 3000));
       setSelectedFixes(new Set());
       await handleStartAudit();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[AUDIT-FIX] Error during automated fix:", error);
       toast({ title: "Fix Failed", description: error.message, variant: "destructive" });
     } finally {

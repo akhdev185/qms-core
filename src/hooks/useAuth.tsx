@@ -130,11 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [supabaseDisabled, setSupabaseDisabled] = React.useState(false);
   const isFetchingRef = React.useRef<string | null>(null);
-  const syncUserProfileRef = React.useRef<(session: any) => Promise<void>>();
+  const syncUserProfileRef = React.useRef<(session: unknown) => Promise<void>>();
   const lastSyncTimestampRef = React.useRef<number>(0);
 
   // Helper for timeouts with retry
-  const withTimeout = async <T,>(promise: any, timeoutMs: number = 5000): Promise<T> => {
+  const withTimeout = async <T,>(promise: Promise<unknown>, timeoutMs: number = 5000): Promise<T> => {
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Timeout")), timeoutMs)
     );
@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     for (let i = 0; i <= retries; i++) {
       try {
         return await fn();
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (i === retries || (abortOnTimeout && err.message === "Timeout")) throw err;
         console.warn(`[AUTH] Retry ${i + 1}/${retries} after error:`, err.message);
         await new Promise(r => setTimeout(r, delayMs));
@@ -167,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         roles.forEach(r => roleMap.set(r.user_id, r.role?.toLowerCase()));
       }
 
-      const mapped = (profiles || []).map((r: any) => ({
+      const mapped = (profiles || []).map((r: ProfileRow) => ({
         id: r.user_id || r.id,
         name: r.display_name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
         email: r.email || "",
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabaseDisabled]);
 
   // Internal helper to sync user profile and role from Supabase
-  const syncUserProfile = React.useCallback(async (session: any) => {
+  const syncUserProfile = React.useCallback(async (session: unknown) => {
     if (!session?.user) {
       setUser(null);
       saveSession(null);
@@ -225,8 +225,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const [profileRes, roleRes] = await withRetry(() => Promise.all([
-        withTimeout<any>(supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle(), 8000),
-        withTimeout<any>(supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle(), 8000),
+        withTimeout<ProfileRow | null>(supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle(), 8000),
+        withTimeout<ProfileRow | null>(supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle(), 8000),
       ]), 1, 1000, false);
 
       const profile = profileRes?.data;
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setUser(fallbackUser);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("[AUTH] Profile sync failed, using cache:", err.message);
     } finally {
       isFetchingRef.current = null;
@@ -362,18 +362,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           const rows = Array.isArray(data) ? data : [];
-          let rolesRows: any[] = [];
+          let rolesRows: unknown[] = [];
           try {
             const { data: rolesData } = await supabase.from("user_roles").select("*");
             rolesRows = Array.isArray(rolesData) ? rolesData : [];
           } catch { /* non-critical */ }
           const roleByUserId = new Map<string, string>();
-          rolesRows.forEach((r: any) => {
+          rolesRows.forEach((r: ProfileRow) => {
             if (r && typeof r.user_id === "string" && typeof r.role === "string") {
               roleByUserId.set(r.user_id, r.role.toLowerCase());
             }
           });
-          const mapped = rows.map((r: any) => {
+          const mapped = rows.map((r: ProfileRow) => {
             const lastLogin = r.last_login ? new Date(r.last_login).getTime() : 0;
             const role = roleByUserId.get(r.user_id || r.id) || "user";
             return {
@@ -449,7 +449,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (rErr) return { ok: false, message: `Role assignment failed: ${rErr.message}` };
 
       return { ok: true, message: "Registration successful. Pending admin approval." };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { ok: false, message: err.message || "An unexpected error occurred during registration" };
     }
   }, []);

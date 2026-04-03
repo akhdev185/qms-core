@@ -64,7 +64,7 @@ export function EditFrequencyModal({ record, isOpen, onClose }: EditFrequencyMod
 
             queryClient.invalidateQueries({ queryKey: ["qms-data"] });
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: "Update Failed",
                 description: error.message || "Could not update frequency in Google Sheets.",
@@ -136,6 +136,6 @@ export function EditFrequencyModal({ record, isOpen, onClose }: EditFrequencyMod
     );
 }
 
-function folderIncluded(val1: any, val2: any) {
+function folderIncluded(val1, val2) {
     return val1 === val2;
 }

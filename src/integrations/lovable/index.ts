@@ -2,7 +2,7 @@ import { supabase } from "../supabase/client";
 
 export const lovable = {
   auth: {
-    callback: async (result: any) => {
+    callback: async (result: unknown) => {
       if (result.error) {
         return { error: result.error };
       }

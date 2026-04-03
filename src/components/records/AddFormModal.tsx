@@ -45,7 +45,7 @@ export function AddFormModal({ isOpen, onClose, onSuccess, category }: AddFormMo
             });
             onSuccess();
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: "Failed to Add Form",
                 description: error.message || "Connection error",
