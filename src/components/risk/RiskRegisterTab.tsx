@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Loader2, RefreshCw, Search, X, Download, Plus, Link2, ExternalLink } from "lucide-react";
+import { Pencil, Loader2, RefreshCw, Search, X, Download, Plus, Link2, ExternalLink, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useRiskData } from "@/hooks/useRiskData";
 import { useCAPAData } from "@/hooks/useCAPAData";
