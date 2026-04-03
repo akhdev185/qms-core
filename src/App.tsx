@@ -7,7 +7,7 @@ import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { AuthProvider } from "./hooks/useAuth";
 import { RequireAuth, RequireRole } from "./components/auth/Guards";
-import { ErrorBoundary } from "./components/ui/error-boundary";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 
 // Lazy loaded routes
 const Index = lazy(() => import("./pages/Index"));
