@@ -78,8 +78,8 @@ export default function ProjectDetailPage() {
         const reviewsArr = Object.values(relevantReviews);
         let status = "Pending";
         if (reviewsArr.length > 0) {
-            if (reviewsArr.every((rev: unknown) => rev.status === 'approved')) status = "Compliant ✅";
-            else if (reviewsArr.some((rev: unknown) => rev.status === 'rejected' || rev.status === 'nc')) status = "Rejected ❌";
+            if (reviewsArr.every((rev: any) => rev.status === 'approved')) status = "Compliant ✅";
+            else if (reviewsArr.some((rev: any) => rev.status === 'rejected' || rev.status === 'nc')) status = "Rejected ❌";
         }
 
         return { ...record, fileReviews: relevantReviews, auditStatus: status, isAtomic: false };
@@ -90,7 +90,7 @@ export default function ProjectDetailPage() {
     let approved = 0, pending = 0, rejected = 0;
     projectRecords.forEach(r => {
         if (r.fileReviews) {
-            Object.values(r.fileReviews).forEach((rev: unknown) => {
+            Object.values(r.fileReviews).forEach((rev: any) => {
                 if (rev.status === 'approved') approved++;
                 else if (rev.status === 'rejected') rejected++;
                 else pending++;
@@ -107,9 +107,9 @@ export default function ProjectDetailPage() {
         
         const reviews = Object.values(r.fileReviews || {});
         const matchesTab = activeTab === "all" || 
-                          (activeTab === "pending" && reviews.some((rev: unknown) => rev.status !== 'approved' && rev.status !== 'rejected')) ||
-                          (activeTab === "compliant" && reviews.every((rev: unknown) => rev.status === 'approved')) ||
-                          (activeTab === "issues" && reviews.some((rev: unknown) => rev.status === 'rejected'));
+                          (activeTab === "pending" && reviews.some((rev: any) => rev.status !== 'approved' && rev.status !== 'rejected')) ||
+                          (activeTab === "compliant" && reviews.every((rev: any) => rev.status === 'approved')) ||
+                          (activeTab === "issues" && reviews.some((rev: any) => rev.status === 'rejected'));
 
         return matchesSearch && matchesTab;
     });
