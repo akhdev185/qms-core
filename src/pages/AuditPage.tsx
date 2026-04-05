@@ -129,6 +129,62 @@ export default function AuditPage() {
     }
   }, [user, queryClient, toast]);
 
+  // Per-record approve: updates a single rejected file to 'approved'
+  const handleApproveRecord = useCallback(async (item: any) => {
+    if (!item?.isAtomic || !item?.fileId) return;
+    const reviewerName = user?.name || user?.email || "System";
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Create the audit trail comment
+    const auditLog = `Approved individually by ${reviewerName} on ${today}`;
+    const currentComment = item.fileReviews?.[item.fileId]?.comment || "";
+    const newComment = currentComment 
+      ? `${currentComment}\n\n[Audit Log]: ${auditLog}` 
+      : `${auditLog}`;
+
+    const updatedReviews = {
+      ...(item.fileReviews || {}),
+      // Set record status to approved as well to clear any integrity rejections
+      recordStatus: 'approved',
+      lastUpdated: new Date().toISOString(),
+      [item.fileId]: {
+        ...(item.fileReviews?.[item.fileId] || {}),
+        status: 'approved',
+        reviewedBy: reviewerName,
+        date: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        comment: newComment,
+      },
+    };
+
+    try {
+      // 1. Update the JSON metadata in Column P
+      const success = await updateSheetCell(item.rowIndex, 'P', JSON.stringify(updatedReviews));
+      
+      if (success) {
+        // 2. Synchronize with summary columns (like statusService.updateRecordStatus does)
+        // This makes the change visible in the main spreadsheet list as well
+        await updateSheetCell(item.rowIndex, 'R', 'TRUE'); // Reviewed
+        await updateSheetCell(item.rowIndex, 'N', reviewerName); // Reviewer
+        await updateSheetCell(item.rowIndex, 'O', today); // Review Date
+        
+        toast({
+          title: "✅ Record Approved",
+          description: `"${item.fileName || item.recordName}" has been approved and audit trail recorded.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["qms-data"] });
+      } else {
+        throw new Error("Update returned false");
+      }
+    } catch (err: any) {
+      toast({
+        title: "Approval Failed",
+        description: err?.message || "Could not update the record status.",
+        variant: "destructive",
+      });
+    }
+  }, [user, queryClient, toast]);
+
   // Export all metadata to JSON file
   const handleExportMetadata = useCallback(() => {
     if (!records) return;
@@ -605,29 +661,29 @@ export default function AuditPage() {
                 </TabsContent>
                 <TabsContent value="issues" className="m-0">
                   {issueRecords.length > 0 && (
-                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20">
-                      <Button
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs"
-                        disabled={bulkLoading}
-                        onClick={() => handleBulkStatusChange(issueRecords, 'approved')}
-                      >
-                        {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
-                        Approve All ({issueRecords.length})
-                      </Button>
+                    <div className="px-5 py-3 border-b border-border flex items-center gap-2 bg-muted/20 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>Use the <strong className="text-emerald-600">Approve</strong> button on each record below to approve individually</span>
+                      </div>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 gap-1.5 text-xs"
+                        className="h-7 gap-1.5 text-xs ml-auto"
                         disabled={bulkLoading}
                         onClick={() => handleBulkStatusChange(issueRecords, 'pending_review')}
                       >
                         <RotateCcw className="w-3 h-3" />
-                        Reset to Pending
+                        Reset All to Pending
                       </Button>
                     </div>
                   )}
-                  <RecordsTable records={issueRecords} isLoading={isLoading} variant={viewMode === "card" ? "default" : "compact"} />
+                  <RecordsTable
+                    records={issueRecords}
+                    isLoading={isLoading}
+                    variant={viewMode === "card" ? "default" : "compact"}
+                    onApproveRecord={handleApproveRecord}
+                  />
                 </TabsContent>
 
                 {/* Overdue tab */}

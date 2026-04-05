@@ -178,11 +178,13 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
                             No files found in this folder
                         </div>
                     ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-6">
                             <div className="text-xs font-medium text-muted-foreground mb-2">
                                 {files.length} file{files.length !== 1 ? 's' : ''} found
                             </div>
-                            {files.map((file) => {
+                            
+                            {/* Other Files (Cards) */}
+                            {files.filter(f => !f.name.toLowerCase().endsWith('.pdf') && f.mimeType !== 'application/pdf').map((file) => {
                                 const serial = parseSerialFromFilename(file.name);
 
                                 return (
@@ -327,6 +329,84 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
                                     </div>
                                 );
                             })}
+
+                            {/* PDF Section */}
+                            {files.filter(f => f.name.toLowerCase().endsWith('.pdf') || f.mimeType === 'application/pdf').length > 0 && (
+                                <div className="mt-8 space-y-4">
+                                    <div className="flex items-center gap-3 px-2">
+                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                                        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                            <FileText className="w-4 h-4 text-sidebar-primary/60" />
+                                            PDF Records
+                                        </div>
+                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        {files.filter(f => f.name.toLowerCase().endsWith('.pdf') || f.mimeType === 'application/pdf').map((file) => {
+                                            const serial = parseSerialFromFilename(file.name);
+                                            const review = record.fileReviews?.[file.id] || { status: 'pending_review' };
+                                            
+                                            return (
+                                                <div 
+                                                    key={file.id}
+                                                    className="group flex flex-col md:flex-row md:items-center justify-between p-4 bg-card/30 backdrop-blur-md border border-border/40 hover:border-sidebar-primary/30 rounded-2xl transition-all duration-300 hover:shadow-lg gap-4"
+                                                >
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                        <div className="w-10 h-10 rounded-xl bg-sidebar-primary/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                                            <FileText className="w-5 h-5 text-sidebar-primary" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <h4 className="text-sm font-bold text-foreground truncate group-hover:text-sidebar-primary transition-colors">{file.name}</h4>
+                                                                {serial && <span className="text-[9px] font-mono font-bold bg-muted px-1.5 py-0.5 rounded border border-border/50 shrink-0">{serial}</span>}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                                                                <StatusBadge status={review.status} size="sm" />
+                                                                <span className="flex items-center gap-1">
+                                                                    <CalendarDays className="w-3 h-3" />
+                                                                    {formatTimeAgo(file.createdTime)}
+                                                                </span>
+                                                                <span className="hidden md:inline font-medium text-foreground/60">• {(review as any).project || "General"}</span>
+                                                                <span className="hidden md:inline font-mono text-foreground/50">• M{(review as any).targetMonth || "—"}/{(review as any).targetYear || "—"}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 gap-1.5 text-[11px] font-bold hover:bg-sidebar-primary/10 hover:text-sidebar-primary rounded-lg transition-all"
+                                                            onClick={() => window.open(file.webViewLink, '_blank')}
+                                                        >
+                                                            <ExternalLink className="w-3.5 h-3.5" />
+                                                            Open
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:bg-sidebar-primary/10 hover:text-sidebar-primary rounded-lg"
+                                                            onClick={() => setEditingFile({ id: file.id, name: file.name })}
+                                                        >
+                                                            <Settings className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                                                            onClick={() => handleArchive(file.id, file.name)}
+                                                            disabled={isLoading}
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { 
   FileText, ExternalLink, Trash2, Edit, ChevronDown, ChevronRight, 
-  Building2, Calendar, User, MessageSquare, Clock, CheckCircle, AlertTriangle, FolderOpen, Folder
+  Building2, Calendar, User, MessageSquare, Clock, CheckCircle, AlertTriangle, FolderOpen, Folder, ThumbsUp, Loader2
 } from "lucide-react";
 import { QMSRecord, RecordStatus } from "@/lib/googleSheets";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,12 @@ interface RecordCardProps {
   onDeleteFile?: (fileId: string, rowIndex: number) => Promise<void>; // New: delete just the file from Drive
   onDeleteRecord?: (rowIndex: number) => void; // Old: delete entire row from sheet
   onUpdateStatus: (record: QMSRecord, status: RecordStatus) => void;
+  onApproveRecord?: (record: QMSRecord) => Promise<void>; // Per-record approve for rejected items
   isUpdating?: boolean;
   variant?: "default" | "compact";
 }
 
-export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord, onUpdateStatus, isUpdating, variant = "default" }: RecordCardProps) {
+export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord, onUpdateStatus, onApproveRecord, isUpdating, variant = "default" }: RecordCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Status mapping for visual cues
@@ -112,6 +113,19 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
 
         {/* Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Per-record Approve button — shown only for rejected records */}
+          {(record.fileStatus === 'rejected' || displayStatus?.toLowerCase() === 'rejected') && onApproveRecord && (
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white border-0 shrink-0"
+              disabled={isUpdating}
+              onClick={() => onApproveRecord(record)}
+              title="Approve this record"
+            >
+              {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsUp className="w-3.5 h-3.5" />}
+              Approve
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm" 
@@ -138,6 +152,7 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
             size="icon" 
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
             onClick={() => onDeleteRecord?.(record.rowIndex)}
+            disabled={isUpdating}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -146,6 +161,7 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
             size="icon" 
             className="h-8 w-8 text-muted-foreground hover:text-primary" 
             onClick={() => onViewDetails(record)}
+            disabled={isUpdating}
           >
             <Edit className="w-3.5 h-3.5" />
           </Button>
@@ -187,6 +203,7 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
         {/* 3. Evidence Details (Expandable) - Following user's text sequence */}
         {isExpanded && (
           <div className="space-y-4 pt-2 pb-2 pl-2 border-l-2 border-primary/10 ml-2 animate-in slide-in-from-top-2 duration-300">
+            {/* Counts */}
             <div className="space-y-1">
               <p className="text-sm font-bold text-foreground">
                 {record.files?.length || 0} File{record.files?.length !== 1 ? 's' : ''}
@@ -196,7 +213,8 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
               </p>
             </div>
 
-            {record.files && record.files.map((file, idx) => (
+            {/* Non-PDF Files */}
+            {record.files?.filter(f => !f.name.toLowerCase().endsWith('.pdf') && f.mimeType !== 'application/pdf').map((file, idx) => (
               <div key={idx} className="bg-background/40 p-3 rounded-xl border border-border/40 space-y-2">
                 <p className="text-sm font-medium truncate">{file.name}</p>
                 <div className="flex items-center justify-between">
@@ -207,6 +225,38 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
                 </div>
               </div>
             ))}
+
+            {/* PDF Files (Compact) */}
+            {record.files?.filter(f => f.name.toLowerCase().endsWith('.pdf') || f.mimeType === 'application/pdf').length > 0 && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center gap-2 px-1 mb-2">
+                   <div className="h-px flex-1 bg-border/30" />
+                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">PDF Documents</span>
+                   <div className="h-px flex-1 bg-border/30" />
+                </div>
+                {record.files?.filter(f => f.name.toLowerCase().endsWith('.pdf') || f.mimeType === 'application/pdf').map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2.5 bg-muted/30 border border-border/20 rounded-lg group/pdf hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-3.5 h-3.5 text-sidebar-primary/60" />
+                      <span className="text-xs font-medium truncate max-w-[200px]">{file.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className={cn("text-[8px] h-4 px-1 uppercase opacity-70", statusCfg.color, statusCfg.border)}>
+                        {displayStatus}
+                      </Badge>
+                      <a 
+                        href={file.webViewLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-1 hover:bg-sidebar-primary/10 rounded transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3 text-sidebar-primary" />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -227,7 +277,18 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
         </div>
 
         {/* 5. Action Row: Open Record & Open Folder & Delete File */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Per-record Approve button for default (card) variant */}
+          {(record.fileStatus === 'rejected' || displayStatus?.toLowerCase() === 'rejected') && onApproveRecord && (
+            <Button
+              className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold text-xs border-0"
+              disabled={isUpdating}
+              onClick={() => onApproveRecord(record)}
+            >
+              {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsUp className="w-3.5 h-3.5" />}
+              Approve Record
+            </Button>
+          )}
           {/* Open File */}
           <Button 
             className="flex-1 h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground gap-2 font-bold text-xs"
@@ -235,6 +296,7 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
               const link = record.fileLink || record.folderLink || record.templateLink;
               if (link) window.open(link, '_blank');
             }}
+            disabled={isUpdating}
           >
             <ExternalLink className="w-3.5 h-3.5" />
             Open File
@@ -245,6 +307,7 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
               variant="outline"
               className="h-10 px-4 rounded-xl border border-border/40 gap-2 font-bold text-xs"
               onClick={() => window.open(record.folderLink, '_blank')}
+              disabled={isUpdating}
             >
               <Folder className="w-3.5 h-3.5" />
               Folder
@@ -255,7 +318,7 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
             variant="ghost" 
             className="h-10 px-4 rounded-xl border border-border/40 text-destructive hover:bg-destructive/5 gap-2 font-bold text-xs"
             onClick={() => onDeleteFile?.(record.fileId || '', record.rowIndex)}
-            disabled={!record.fileId}
+            disabled={!record.fileId || isUpdating}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -290,7 +353,8 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
         {/* 7. Bottom Action: Edit Metadata */}
         <button 
           onClick={() => onViewDetails(record)}
-          className="w-full pt-4 text-center text-xs font-bold text-primary hover:underline flex items-center justify-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity border-t border-border/40"
+          disabled={isUpdating}
+          className="w-full pt-4 text-center text-xs font-bold text-primary hover:underline flex items-center justify-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity border-t border-border/40 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Edit className="w-3 h-3" />
           Edit Metadata

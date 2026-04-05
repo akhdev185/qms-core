@@ -54,6 +54,7 @@ interface RecordsTableProps {
   records: QMSRecord[];
   isLoading?: boolean;
   variant?: "default" | "compact";
+  onApproveRecord?: (record: QMSRecord) => Promise<void>;
 }
 
 function getAuditStatusBadge(status: string) {
@@ -67,7 +68,7 @@ function getAuditStatusBadge(status: string) {
 
 import { RecordCard } from "./RecordCard";
 
-export function RecordsTable({ records, isLoading = false, variant = "default" }: RecordsTableProps) {
+export function RecordsTable({ records, isLoading = false, variant = "default", onApproveRecord }: RecordsTableProps) {
   const navigate = useNavigate();
   const updateRecord = useUpdateRecord();
   const deleteRecord = useDeleteRecord();
@@ -90,10 +91,10 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
       } else {
         throw new Error("Update failed");
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       toast({
         title: "Update Failed",
-        description: err.message || "Google Sheets rejected the write operation.",
+        description: err?.message || "Google Sheets rejected the write operation.",
         variant: "destructive"
       });
     } finally {
@@ -107,8 +108,8 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
       await deleteRecord.mutateAsync(rowIndex);
       toast({ title: "Record Deleted" });
       queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-    } catch (error: unknown) {
-      toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Delete Failed", description: error?.message, variant: "destructive" });
     }
   };
 
@@ -168,16 +169,17 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
               if (!fileId) return;
               if (!window.confirm("Delete this file from Drive? (Will remove from folder)")) return;
               try {
-                const { deleteFileById } = await import("@/lib/driveService");
-                await deleteFileById(fileId);
+                const { permanentlyDeleteDriveFile } = await import("@/lib/driveService");
+                await permanentlyDeleteDriveFile(fileId);
                 toast({ title: "File Deleted", description: "File removed from Drive" });
                 queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-              } catch (err: unknown) {
-                toast({ title: "Delete Failed", description: err.message, variant: "destructive" });
+              } catch (err: any) {
+                toast({ title: "Delete Failed", description: err?.message, variant: "destructive" });
               }
             }}
             onDeleteRecord={handleDelete}
             onUpdateStatus={handleUpdateStatus}
+            onApproveRecord={onApproveRecord}
             isUpdating={updatingRows[record.isAtomic ? `file-${record.fileId}` : `${record.rowIndex}-audit`]}
             variant={variant}
           />

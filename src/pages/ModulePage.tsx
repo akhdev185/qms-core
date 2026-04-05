@@ -479,18 +479,15 @@ export default function ModulePage() {
 
                               {isExpanded ? (
                                 <div className="p-4 space-y-3 bg-muted/5 flex-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  <div className="space-y-3">
-                                    {group.files.map((file: unknown) => (
+                                    <div className="space-y-3">
                                       <RecordBrowser
-                                        key={file.id}
                                         record={{
                                           ...record,
-                                          files: [file]
+                                          files: group.files as any[]
                                         }}
                                         isFlat
                                       />
-                                    ))}
-                                  </div>
+                                    </div>
                                 </div>
                               ) : (
                                 <div className="p-12 flex flex-col items-center justify-center text-center space-y-4 flex-1">
