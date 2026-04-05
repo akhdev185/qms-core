@@ -61,17 +61,26 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-mono font-bold text-primary/70">{record.code}</span>
-              <h4 className="text-sm font-bold text-foreground truncate">{record.recordName}</h4>
+              <h4 className="text-sm font-bold text-foreground truncate">
+                {isAtomic && record.fileName ? record.fileName : record.recordName}
+              </h4>
+              {isAtomic && record.fileName && (
+                <span className="text-xs text-muted-foreground truncate max-w-[150px]">({record.recordName})</span>
+              )}
               <Badge variant="outline" className={cn("text-[9px] h-4 py-0 uppercase", statusCfg.color, statusCfg.border)}>
                 {displayStatus}
               </Badge>
             </div>
             
             <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1 font-medium bg-muted/40 px-1.5 py-0.5 rounded">
-                <FileText className="w-3 h-3" /> {record.files?.length || 0} Files
-              </span>
-              <span>•</span>
+              {!isAtomic && (
+                <>
+                  <span className="flex items-center gap-1 font-medium bg-muted/40 px-1.5 py-0.5 rounded">
+                    <FileText className="w-3 h-3" /> {record.files?.length || 0} Files
+                  </span>
+                  <span>•</span>
+                </>
+              )}
               <span className="truncate max-w-[150px]">{review.project || "General / All Company"}</span>
               <span>•</span>
               <span className="font-mono">{review.targetMonth || "M3"} / {review.targetYear || "2026"}</span>
@@ -81,7 +90,7 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
               <span>{record.reviewDate || "3/18/2026"}</span>
             </div>
 
-            {record.files && record.files.length > 0 && (
+            {record.files && record.files.length > 0 && !isAtomic && (
               <div className="mt-2.5 flex flex-wrap gap-1.5 pt-2 border-t border-border/40">
                 {record.files.map((file, idx) => (
                   <a 
@@ -155,7 +164,11 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
         {/* 1. Category & Code */}
         <div>
           <h3 className="text-xl font-bold text-foreground font-heading tracking-tight">{record.category}</h3>
-          <p className="text-sm font-mono text-muted-foreground mt-0.5">{record.code}</p>
+          <p className="text-sm font-mono text-muted-foreground mt-0.5">
+            <span className="font-bold text-primary">{record.code}</span>
+            {isAtomic && record.fileName && ` • ${record.fileName}`}
+            {!isAtomic && ` • ${record.recordName}`}
+          </p>
         </div>
 
         {/* 2. View Collected Evidence Button */}

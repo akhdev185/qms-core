@@ -69,6 +69,7 @@ export interface QMSRecord {
   fileStatus?: RecordStatus;
   fileReviewedBy?: string;
   fileId?: string;
+  fileName?: string;
   fileLink?: string;
   googleDriveFileId?: string;
   driveFileId?: string;
