@@ -107,8 +107,8 @@ export function useFormValidation<T extends Record<string, unknown>>(
   initialValues: T,
   validationRules: ValidationRules<T>
 ) {
-  const [values, setValues] = useState<T>(initialValues);
-  const [errors, setErrors] = useState<ValidationErrors<T>>({});
+  const [values, setValues] = React.useState<T>(initialValues);
+  const [errors, setErrors] = React.useState<ValidationErrors<T>>({});
 
   const validate = useCallback(() => {
     const result = validateForm(values, validationRules);
