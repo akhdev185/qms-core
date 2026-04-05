@@ -197,7 +197,11 @@ async function auditSingleRecord(
             // ═══════ PHASE 2: File Sequence Integrity ═══════
             if (result.folderStatus === 'valid' || result.folderStatus === 'wrong_name') {
               ctx.apiCallCount++;
-              folderFiles = await listFolderFiles(record.folderLink);
+              const allFolderFiles = await listFolderFiles(record.folderLink);
+              
+              // Ignore .json files completely in audit
+              folderFiles = allFolderFiles.filter(f => !f.name.toLowerCase().endsWith('.json'));
+              
               result.filesChecked = folderFiles.length;
 
               if (folderFiles && folderFiles.length > 0) {
@@ -342,8 +346,8 @@ async function auditSingleRecord(
       result.issues.push({ message: "Missing folder link.", severity: 'critical', phase: 1 });
     }
 
-  } catch (err: unknown) {
-    result.error = err.message || "Unknown error";
+  } catch (err: any) {
+    result.error = err?.message || "Unknown error";
     result.issues.push({ message: `Drive API error: ${result.error}`, severity: 'critical', phase: 1 });
   }
 
@@ -422,6 +426,7 @@ export async function runAutomatedAudit(
   records.forEach(record => {
     const files = record.files || [];
     files.forEach(file => {
+      if (file.name.toLowerCase().endsWith('.json')) return; // Ignore JSON files completely
       if (!fileIdMap.has(file.id)) fileIdMap.set(file.id, []);
       fileIdMap.get(file.id)!.push(record.code);
     });

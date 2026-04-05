@@ -379,16 +379,18 @@ export default function ModulePage() {
                       <div key={record.code} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start animate-fade-in group/row">
                         {/* Left: Form Template Card */}
                         <div className="glass-card rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 group border-l-4 border-l-primary/30 hover:border-l-primary relative h-full flex flex-col glass-sheen card-hover-enhanced">
-                          <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-start justify-between mb-4">
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-bold text-lg truncate">{record.recordName}</h3>
-                                <span className="text-[10px] font-mono bg-sidebar-primary/10 text-sidebar-primary px-1.5 py-0.5 rounded flex-shrink-0">{record.code}</span>
+                              <div className="flex flex-col gap-2 mb-2">
+                                <span className="inline-flex items-center justify-center bg-primary text-primary-foreground font-mono font-black text-sm md:text-base px-3 py-1 rounded-lg shadow-sm self-start tracking-wider">
+                                  {record.code}
+                                </span>
+                                <h3 className="font-black text-xl md:text-2xl text-foreground leading-tight line-clamp-2">{record.recordName}</h3>
                               </div>
                               <p className="text-sm text-foreground/80 leading-relaxed line-clamp-2">{record.description}</p>
                             </div>
                             {hasFiles && (
-                              <div className="ml-2 px-2 py-1 rounded-full bg-sidebar-primary/10 text-sidebar-primary text-xs font-bold border border-sidebar-primary/20">
+                              <div className="ml-2 px-3 py-1.5 rounded-full bg-sidebar-primary/10 text-sidebar-primary text-xs font-bold border border-sidebar-primary/20 shrink-0 shadow-sm mt-1">
                                 {group.files.length} Records
                               </div>
                             )}
@@ -461,11 +463,11 @@ export default function ModulePage() {
                                   <ClipboardCheck className="w-5 h-5 text-success" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-base text-foreground truncate">{record.recordName}</h3>
-                                    <span className="text-[10px] font-mono bg-success/10 text-success px-1.5 py-0.5 rounded">{record.code}</span>
+                                  <div className="flex items-center gap-2.5 mb-1">
+                                    <span className="text-xs md:text-sm font-mono font-black bg-success text-success-foreground px-2 py-0.5 rounded shadow-sm shrink-0">{record.code}</span>
+                                    <h3 className="font-bold text-lg text-foreground truncate">{record.recordName}</h3>
                                   </div>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium uppercase tracking-tighter">View Collected Evidence</p>
+                                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">View Collected Evidence</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <div className="text-xs font-bold text-success bg-success/5 px-2 py-1 rounded-lg border border-success/10">

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 export function RiskRegisterTab() {
-    const { risks, isLoading, isError, error, refetch, updateRisk, isUpdating } = useRiskData();
+    const { risks, isLoading, isError, error, refetch, updateRisk, isUpdating, addRisk, isAdding: isAddingRisk } = useRiskData();
     const { capas, addCAPA, isAdding: isAddingCAPA } = useCAPAData();
     const navigate = useNavigate();
     const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
@@ -101,6 +101,21 @@ export function RiskRegisterTab() {
         };
         updateRisk({ riskId: editingRisk.riskId, updates });
         setIsEditOpen(false);
+        setEditingRisk(null);
+    };
+
+    const handleAddRisk = () => {
+        if (!editingRisk) return;
+        addRisk({
+            processDepartment: editingRisk.processDepartment || "",
+            riskDescription: editingRisk.riskDescription || "",
+            cause: editingRisk.cause || "",
+            likelihood: editingRisk.likelihood || 1,
+            impact: editingRisk.impact || 1,
+            actionControl: editingRisk.actionControl || "",
+            owner: editingRisk.owner || "",
+        });
+        setIsAddOpen(false);
         setEditingRisk(null);
     };
 
@@ -239,7 +254,7 @@ export function RiskRegisterTab() {
                     <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => refetch()}>
                         <RefreshCw className="w-3.5 h-3.5" /> Sync
                     </Button>
-                    <Button size="sm" className="h-9 gap-1.5 bg-primary" onClick={() => { setEditingRisk({ riskId: "", department: "", riskDescription: "", cause: "", likelihood: 3, impact: 3, actionControl: "", owner: "", status: "Open", reviewDate: "", linkedCAPA: "", rowIndex: 0 }); setIsAddOpen(true); }}>
+                    <Button size="sm" className="h-9 gap-1.5 bg-primary" onClick={() => { setEditingRisk({ riskId: "", processDepartment: "", riskDescription: "", cause: "", likelihood: 3, impact: 3, actionControl: "", owner: "", status: "Open", reviewDate: "", linkedCAPA: "", rowIndex: 0 }); setIsAddOpen(true); }}>
                         <Plus className="w-3.5 h-3.5" /> Add Risk
                     </Button>
                 </div>
@@ -593,22 +608,23 @@ export function RiskRegisterTab() {
                         </DialogDescription>
                     </DialogHeader>
                     
+                    {editingRisk && (
                     <div className="space-y-3 py-2">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <Label className="text-[10px] font-bold uppercase text-muted-foreground">Risk ID</Label>
                                 <Input 
-                                    placeholder="R-001" 
-                                    value={editingRisk.riskId || ''}
-                                    onChange={(e) => setEditingRisk({...editingRisk, riskId: e.target.value})}
+                                    disabled
+                                    placeholder="Auto-generated" 
+                                    value="Auto-generated on Save"
                                 />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[10px] font-bold uppercase text-muted-foreground">Department</Label>
                                 <Input 
                                     placeholder="Quality" 
-                                    value={editingRisk.department || ''}
-                                    onChange={(e) => setEditingRisk({...editingRisk, department: e.target.value})}
+                                    value={editingRisk.processDepartment || ''}
+                                    onChange={(e) => setEditingRisk({...editingRisk, processDepartment: e.target.value})}
                                 />
                             </div>
                         </div>
@@ -644,6 +660,15 @@ export function RiskRegisterTab() {
                             </div>
                         </div>
                         <div className="space-y-1">
+                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Cause / Mitigation</Label>
+                            <Textarea 
+                                placeholder="Describe the cause or action..." 
+                                value={editingRisk.cause || ''}
+                                onChange={(e) => setEditingRisk({...editingRisk, cause: e.target.value})}
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-1">
                             <Label className="text-[10px] font-bold uppercase text-muted-foreground">Owner</Label>
                             <Input 
                                 placeholder="Manager name"
@@ -652,14 +677,19 @@ export function RiskRegisterTab() {
                             />
                         </div>
                     </div>
+                    )}
 
                     <DialogFooter className="gap-2">
                         <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                        <Button onClick={() => {
-                            // Save to sheet - using similar pattern as edit
-                            handleSaveRisk(); 
-                            setIsAddOpen(false);
-                        }}>Save Risk</Button>
+                        <Button 
+                            disabled={isAddingRisk}
+                            onClick={() => {
+                                handleAddRisk();
+                            }}
+                        >
+                            {isAddingRisk && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                            Save Risk
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
