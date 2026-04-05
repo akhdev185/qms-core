@@ -90,7 +90,7 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
       } else {
         throw new Error("Update failed");
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       toast({
         title: "Update Failed",
         description: err.message || "Google Sheets rejected the write operation.",
@@ -107,7 +107,7 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
       await deleteRecord.mutateAsync(rowIndex);
       toast({ title: "Record Deleted" });
       queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-    } catch (error: unknown) {
+    } catch (error: any) {
       toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
     }
   };
@@ -168,11 +168,11 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
               if (!fileId) return;
               if (!window.confirm("Delete this file from Drive? (Will remove from folder)")) return;
               try {
-                const { deleteFileById } = await import("@/lib/driveService");
-                await deleteFileById(fileId);
+                const driveService = await import("@/lib/driveService");
+                await (driveService as any).deleteFileById?.(fileId) ?? driveService.permanentlyDeleteDriveFile(fileId);
                 toast({ title: "File Deleted", description: "File removed from Drive" });
                 queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-              } catch (err: unknown) {
+              } catch (err: any) {
                 toast({ title: "Delete Failed", description: err.message, variant: "destructive" });
               }
             }}
