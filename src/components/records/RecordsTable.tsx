@@ -48,6 +48,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { FormDetailsModal } from "./FormDetailsModal";
+import { EditMetadataModal } from "./EditMetadataModal";
 
 interface RecordsTableProps {
   records: QMSRecord[];
@@ -74,6 +75,7 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
   const { toast } = useToast();
   const { user } = useAuth();
   const [updatingRows, setUpdatingRows] = useState<Record<string, boolean>>({});
+  const [editingFileRecord, setEditingFileRecord] = useState<any | null>(null);
 
   const handleUpdateStatus = async (record: QMSRecord, status: RecordStatus) => {
     const key = record.isAtomic ? `file-${record.fileId}` : `${record.rowIndex}-audit`;
@@ -155,7 +157,13 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
           <RecordCard
             key={record.isAtomic ? `file-${record.fileId}` : `${record.code}-${record.rowIndex}`}
             record={record}
-            onViewDetails={(r) => navigate(`/module/${r.category.toLowerCase().replace(/\s+/g, '-')}`)}
+            onViewDetails={(r) => {
+              if (r.isAtomic && r.fileId) {
+                setEditingFileRecord(r);
+              } else {
+                navigate(`/module/${r.category.toLowerCase().replace(/\s+/g, '-')}`);
+              }
+            }}
             onDeleteFile={async (fileId, rowIndex) => {
               if (!fileId) return;
               if (!window.confirm("Delete this file from Drive? (Will remove from folder)")) return;
@@ -175,6 +183,20 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
           />
         ))}
       </div>
+
+      {editingFileRecord && (
+        <EditMetadataModal
+          isOpen={!!editingFileRecord}
+          onClose={() => setEditingFileRecord(null)}
+          record={editingFileRecord}
+          fileId={editingFileRecord.fileId}
+          fileName={editingFileRecord.fileName}
+          onSuccess={() => {
+            setEditingFileRecord(null);
+            queryClient.invalidateQueries({ queryKey: ["qms-data"] });
+          }}
+        />
+      )}
     </div>
   );
 }
