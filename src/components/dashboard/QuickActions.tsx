@@ -125,7 +125,7 @@ export function QuickActions() {
     try {
       await addCAPA({
         sourceOfCAPA: capaForm.sourceOfCAPA,
-        type: capaForm.type,
+        type: capaForm.type as any,
         description: capaForm.description,
         reference: capaForm.reference,
         rootCauseAnalysis: capaForm.rootCauseAnalysis,

@@ -103,11 +103,11 @@ export const validators = {
 };
 
 // Type-safe form hook
-export function useFormValidation<T extends Record<string, unknown>>(
+export function useFormValidation<T extends Record<string, any>>(
   initialValues: T,
   validationRules: ValidationRules<T>
 ) {
-  const { useState, useCallback } = await import('react');
+  const { useState, useCallback } = require('react');
   const [values, setValues] = useState<T>(initialValues);
   const [errors, setErrors] = useState<ValidationErrors<T>>({});
 
@@ -117,11 +117,11 @@ export function useFormValidation<T extends Record<string, unknown>>(
     return result.isValid;
   }, [values, validationRules]);
 
-  const handleChange = useCallback((field: keyof T, value: unknown) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
+  const handleChange = useCallback((field: keyof T, value: any) => {
+    setValues((prev: T) => ({ ...prev, [field]: value }));
     // Clear error when field is changed
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      setErrors((prev: ValidationErrors<T>) => ({ ...prev, [field]: undefined }));
     }
   }, [errors]);
 

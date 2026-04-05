@@ -226,7 +226,7 @@ export function EditMetadataModal({ isOpen, onClose, record, fileId, fileName, o
                                     id="identifiedErrors"
                                     placeholder="List specific errors found in the file..."
                                     className="resize-none h-20 bg-destructive/5 border-destructive/20"
-                                    value={identifiedErrors}
+                                    value={identifiedErrors as string}
                                     onChange={(e) => setIdentifiedErrors(e.target.value)}
                                 />
                             </div>
@@ -234,7 +234,7 @@ export function EditMetadataModal({ isOpen, onClose, record, fileId, fileName, o
                                 <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-lg border border-border">
                                     <Checkbox 
                                         id="errorsFixed" 
-                                        checked={errorsFixed}
+                                        checked={errorsFixed as boolean}
                                         onCheckedChange={(checked) => setErrorsFixed(checked as boolean)}
                                     />
                                     <div className="grid gap-1.5 leading-none">

@@ -168,8 +168,8 @@ export function RecordsTable({ records, isLoading = false, variant = "default" }
               if (!fileId) return;
               if (!window.confirm("Delete this file from Drive? (Will remove from folder)")) return;
               try {
-                const { deleteFileById } = await import("@/lib/driveService");
-                await deleteFileById(fileId);
+                const driveService = await import("@/lib/driveService");
+                await (driveService as any).deleteFileById?.(fileId) ?? driveService.permanentlyDeleteDriveFile(fileId);
                 toast({ title: "File Deleted", description: "File removed from Drive" });
                 queryClient.invalidateQueries({ queryKey: ["qms-data"] });
               } catch (err: any) {

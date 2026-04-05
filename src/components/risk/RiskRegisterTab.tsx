@@ -254,7 +254,7 @@ export function RiskRegisterTab() {
                     <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => refetch()}>
                         <RefreshCw className="w-3.5 h-3.5" /> Sync
                     </Button>
-                    <Button size="sm" className="h-9 gap-1.5 bg-primary" onClick={() => { setEditingRisk({ riskId: "", processDepartment: "", riskDescription: "", cause: "", likelihood: 3, impact: 3, actionControl: "", owner: "", status: "Open", reviewDate: "", linkedCAPA: "", rowIndex: 0 }); setIsAddOpen(true); }}>
+                    <Button size="sm" className="h-9 gap-1.5 bg-primary" onClick={() => { setEditingRisk({ riskId: "", processDepartment: "", riskDescription: "", cause: "", likelihood: 3, impact: 3, riskScore: 9, actionControl: "", owner: "", status: "Open", reviewDate: "", linkedCAPA: "", rowIndex: 0 }); setIsAddOpen(true); }}>
                         <Plus className="w-3.5 h-3.5" /> Add Risk
                     </Button>
                 </div>
@@ -402,7 +402,7 @@ export function RiskRegisterTab() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</Label>
-                                    <Select value={editingRisk.status} onValueChange={(val: string) => setEditingRisk({ ...editingRisk, status: val })}>
+                                    <Select value={editingRisk.status} onValueChange={(val) => setEditingRisk({ ...editingRisk, status: val as any })}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Open">Open</SelectItem>
@@ -478,7 +478,7 @@ export function RiskRegisterTab() {
 
                         <div className="space-y-2">
                             <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</Label>
-                            <Select value={newCAPAData.type} onValueChange={(val: string) => setNewCAPAData({ ...newCAPAData, type: val })}>
+                            <Select value={newCAPAData.type} onValueChange={(val) => setNewCAPAData({ ...newCAPAData, type: val as any })}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Corrective">Corrective</SelectItem>
