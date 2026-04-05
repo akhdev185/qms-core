@@ -102,12 +102,13 @@ export const validators = {
   }),
 };
 
-// Type-safe form hook
+// Type-safe form hook - requires React imports
+import { useState, useCallback } from 'react';
+
 export function useFormValidation<T extends Record<string, any>>(
   initialValues: T,
   validationRules: ValidationRules<T>
 ) {
-  const { useState, useCallback } = require('react');
   const [values, setValues] = useState<T>(initialValues);
   const [errors, setErrors] = useState<ValidationErrors<T>>({});
 
