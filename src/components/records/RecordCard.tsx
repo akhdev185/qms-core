@@ -80,6 +80,24 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
               <span>•</span>
               <span>{record.reviewDate || "3/18/2026"}</span>
             </div>
+
+            {record.files && record.files.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5 pt-2 border-t border-border/40">
+                {record.files.map((file, idx) => (
+                  <a 
+                    key={idx} 
+                    href={file.webViewLink || record.folderLink || '#'} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[9px] font-mono hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors bg-muted/50 border border-border/80 text-muted-foreground px-2 py-0.5 rounded-md truncate max-w-[180px] flex items-center gap-1"
+                    title="Open in Drive"
+                  >
+                    <FileText className="w-2.5 h-2.5 shrink-0" />
+                    {file.name}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
