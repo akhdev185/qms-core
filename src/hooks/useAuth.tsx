@@ -27,7 +27,7 @@ type AuthContextValue = {
   updateUser: (id: string, updates: Partial<AppUser>) => Promise<void>;
   removeUser: (id: string) => Promise<void>;
   resetPassword: (email: string) => Promise<{ ok: boolean; message: string }>;
-  changePassword: (id: string, oldPass: string, newPass: string) => boolean;
+  changePassword: (id: string, oldPass: string, newPass: string) => Promise<boolean>;
   reloadUsers: () => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<{ ok: boolean; message: string }>;
   loading: boolean;
@@ -130,15 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [supabaseDisabled, setSupabaseDisabled] = React.useState(false);
   const isFetchingRef = React.useRef<string | null>(null);
-  const syncUserProfileRef = React.useRef<(session: unknown) => Promise<void>>();
+  const syncUserProfileRef = React.useRef<(session: any) => Promise<void>>();
   const lastSyncTimestampRef = React.useRef<number>(0);
 
   // Helper for timeouts with retry
-  const withTimeout = async <T,>(promise: Promise<unknown>, timeoutMs: number = 5000): Promise<T> => {
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number = 5000): Promise<T> => {
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Timeout")), timeoutMs)
     );
-    return Promise.race([promise, timeout]) as Promise<T>;
+    return Promise.race([promise, timeout]);
   };
 
   const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 1, delayMs: number = 1000, abortOnTimeout: boolean = false): Promise<T> => {
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabaseDisabled]);
 
   // Internal helper to sync user profile and role from Supabase
-  const syncUserProfile = React.useCallback(async (session: unknown) => {
+  const syncUserProfile = React.useCallback(async (session: any) => {
     if (!session?.user) {
       setUser(null);
       saveSession(null);
@@ -224,9 +224,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const [profileRes, roleRes] = await withRetry(() => Promise.all([
-        withTimeout<ProfileRow | null>(supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle(), 8000),
-        withTimeout<ProfileRow | null>(supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle(), 8000),
+      const [profileRes, roleRes]: any[] = await withRetry(() => Promise.all([
+        withTimeout(supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle(), 8000),
+        withTimeout(supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle(), 8000),
       ]), 1, 1000, false);
 
       const profile = profileRes?.data;
@@ -362,13 +362,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           const rows = Array.isArray(data) ? data : [];
-          let rolesRows: unknown[] = [];
+          let rolesRows: any[] = [];
           try {
             const { data: rolesData } = await supabase.from("user_roles").select("*");
             rolesRows = Array.isArray(rolesData) ? rolesData : [];
           } catch { /* non-critical */ }
           const roleByUserId = new Map<string, string>();
-          rolesRows.forEach((r: ProfileRow) => {
+          rolesRows.forEach((r: any) => {
             if (r && typeof r.user_id === "string" && typeof r.role === "string") {
               roleByUserId.set(r.user_id, r.role.toLowerCase());
             }
