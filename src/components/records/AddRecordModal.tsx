@@ -108,7 +108,7 @@ export function AddRecordModal({ isOpen, onClose, templates, onSuccess }: AddRec
                     description: `Generated ${newName}`,
                 });
             }
-        } catch (error: unknown) {
+        } catch (error: any) {
             toast({
                 title: "Creation Failed",
                 description: error.message || "An unexpected error occurred",

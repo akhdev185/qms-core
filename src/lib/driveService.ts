@@ -609,7 +609,7 @@ export async function checkDriveWritePermission(): Promise<{ success: boolean; m
 
     return { success: true, message: "Write permission verified successfully." };
 
-  } catch (error: unknown) {
+  } catch (error: any) {
     // Error logged
     return { success: false, message: `Network or API error: ${error.message}` };
   }

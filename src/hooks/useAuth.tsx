@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     for (let i = 0; i <= retries; i++) {
       try {
         return await fn();
-      } catch (err: unknown) {
+      } catch (err: any) {
         if (i === retries || (abortOnTimeout && err.message === "Timeout")) throw err;
         console.warn(`[AUTH] Retry ${i + 1}/${retries} after error:`, err.message);
         await new Promise(r => setTimeout(r, delayMs));
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setUser(fallbackUser);
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.warn("[AUTH] Profile sync failed, using cache:", err.message);
     } finally {
       isFetchingRef.current = null;
@@ -449,7 +449,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (rErr) return { ok: false, message: `Role assignment failed: ${rErr.message}` };
 
       return { ok: true, message: "Registration successful. Pending admin approval." };
-    } catch (err: unknown) {
+    } catch (err: any) {
       return { ok: false, message: err.message || "An unexpected error occurred during registration" };
     }
   }, []);

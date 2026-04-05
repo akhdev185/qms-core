@@ -122,7 +122,7 @@ export default function AuditPage() {
         description: `${successCount} files changed to "${newStatus}"`,
       });
       queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-    } catch (error: unknown) {
+    } catch (error: any) {
       toast({ title: "Bulk Update Failed", description: error.message, variant: "destructive" });
     } finally {
       setBulkLoading(false);
@@ -178,7 +178,7 @@ export default function AuditPage() {
           description: `${successCount} records restored successfully`,
         });
         queryClient.invalidateQueries({ queryKey: ["qms-data"] });
-      } catch (error: unknown) {
+      } catch (error: any) {
         toast({ title: "Import Failed", description: error.message, variant: "destructive" });
       } finally {
         setBulkLoading(false);

@@ -393,7 +393,7 @@ export async function updateSheetCell(
     }
 
     return true;
-  } catch (error: unknown) {
+  } catch (error: any) {
     // Error logged
     throw error; // Propagate the error so UI can show message
   }
