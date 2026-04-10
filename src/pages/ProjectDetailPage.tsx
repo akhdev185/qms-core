@@ -170,7 +170,7 @@ export default function ProjectDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-card/40 backdrop-blur-xl border border-border/40 p-6 rounded-3xl flex items-center gap-4">
+            <div className="glass-card backdrop-blur-xl p-6 rounded-3xl flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                     <FolderOpen className="w-6 h-6 text-primary" />
                 </div>
@@ -230,7 +230,7 @@ export default function ProjectDetailPage() {
                 </div>
              </div>
 
-             <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] p-4 md:p-8 min-h-[400px]">
+             <div className="glass-card backdrop-blur-xl rounded-[2.5rem] p-4 md:p-8 min-h-[400px]">
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full py-20">
                         <Clock className="w-10 h-10 animate-spin text-primary/30" />

@@ -235,7 +235,7 @@ export default function ModulePage() {
                 </Button>
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shadow-lg shadow-accent/10">
+                    <div className="w-12 h-12 rounded-xl glass-card flex items-center justify-center shadow-lg shadow-accent/10">
                       <Icon className="w-6 h-6 text-accent" />
                     </div>
                     <div>
