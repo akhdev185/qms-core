@@ -62,13 +62,13 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-nowrap">
               <span className="text-xs font-mono font-bold text-primary/70 shrink-0">{record.code}</span>
-              <h4 className="text-sm font-bold text-foreground truncate whitespace-nowrap">
+              <h4 className="text-sm font-bold text-foreground truncate whitespace-nowrap" title={isAtomic && record.fileName ? record.fileName : record.recordName}>
                 {isAtomic && record.fileName ? record.fileName : record.recordName}
               </h4>
               {isAtomic && record.fileName && (
-                <span className="text-xs text-muted-foreground truncate max-w-[150px]">({record.recordName})</span>
+                <span className="text-xs text-muted-foreground shrink-0" title={record.recordName}>({record.recordName})</span>
               )}
-              <Badge variant="outline" className={cn("text-[9px] h-4 py-0 uppercase", statusCfg.color, statusCfg.border)}>
+              <Badge variant="outline" className={cn("text-[9px] h-4 py-0 uppercase shrink-0", statusCfg.color, statusCfg.border)}>
                 {displayStatus}
               </Badge>
             </div>
