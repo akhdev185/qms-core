@@ -95,11 +95,11 @@ export function Header() {
   };
 
   const searchBar = (
-    <div className="relative w-full focus-within:ring-2 focus-within:ring-primary/20 rounded-full transition-all duration-300" ref={dropdownRef}>
-      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+    <div className="relative w-full group" ref={dropdownRef}>
+      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary z-10" />
       <Input
         placeholder="Search files and folders..."
-        className="pl-11 pr-4 bg-muted/40 border-transparent rounded-full shadow-none focus-visible:ring-0 focus-visible:bg-background focus-visible:border-border/50 transition-all h-10"
+        className="pl-11 pr-4 glass-card rounded-xl shadow-none focus-visible:ring-2 focus-visible:ring-primary/30 transition-all h-10 font-medium"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         onFocus={() => searchTerm.length >= 2 && setShowDropdown(true)}
@@ -110,7 +110,7 @@ export function Header() {
 
       {/* Results Dropdown */}
       {showDropdown && (
-        <div className="absolute top-full left-0 w-full mt-2 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden animate-fade-up z-50">
+        <div className="absolute top-full left-0 w-full mt-2 glass-card rounded-xl shadow-xl overflow-hidden animate-fade-in z-50">
           <div className="max-h-[400px] overflow-y-auto">
             {results.length > 0 ? (
               <>
