@@ -113,7 +113,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
       const recordsToClear = cleanRecords.filter(cr => {
         const original = records.find(r => r.code === cr.recordCode);
         const reviews = original?.fileReviews;
-        return reviews?.recordStatus === 'rejected';
+        return (reviews as any)?.recordStatus === 'rejected';
       });
 
       if (recordsWithIssues.length === 0 && recordsToClear.length === 0) {
@@ -140,9 +140,9 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
         const original = records.find(r => r.code === res.recordCode);
         if (!original) continue;
         const currentReviews = { ...(original.fileReviews) };
-        delete currentReviews.recordStatus;
-        delete currentReviews.auditIssues;
-        currentReviews.lastAuditDate = new Date().toISOString();
+        delete (currentReviews as any).recordStatus;
+        delete (currentReviews as any).auditIssues;
+        (currentReviews as any).lastAuditDate = new Date().toISOString();
         await updateSheetCell(original.rowIndex, 'P', JSON.stringify(currentReviews));
         updatedCount++;
       }
@@ -759,7 +759,7 @@ export function AutomatedAuditModal({ isOpen, onClose, records }: AutomatedAudit
             {results && results.length > 0 && (results.some(r => r.suggestedStatus === 'rejected') || results.some(r => {
               const original = records.find(rec => rec.code === r.recordCode);
               const reviews = original?.fileReviews;
-              return reviews?.recordStatus === 'rejected' && r.suggestedStatus === 'approved';
+              return (reviews as any)?.recordStatus === 'rejected' && r.suggestedStatus === 'approved';
             })) && (
                 <Button
                   variant="default"
