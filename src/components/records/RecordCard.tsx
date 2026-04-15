@@ -61,30 +61,30 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
           {/* Main Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-nowrap">
-              <span className="text-xs font-mono font-bold text-primary/70 shrink-0">{record.code}</span>
-              <h4 className="text-base font-extrabold text-foreground truncate whitespace-nowrap" title={isAtomic && record.fileName ? record.fileName : record.recordName}>
+              <span className="text-xs font-mono font-bold text-blue-400 shrink-0">{record.code}</span>
+              <h4 className="text-base font-extrabold text-white truncate whitespace-nowrap" title={isAtomic && record.fileName ? record.fileName : record.recordName}>
                 {isAtomic && record.fileName ? record.fileName : record.recordName}
               </h4>
               {isAtomic && record.fileName && record.recordName !== record.fileName && (
-                <span className="text-xs text-muted-foreground shrink-0" title={record.recordName}>({record.recordName})</span>
+                <span className="text-xs text-gray-300 shrink-0" title={record.recordName}>({record.recordName})</span>
               )}
               <Badge variant="outline" className={cn("status-badge", statusCfg.color, statusCfg.border)}>
                 {displayStatus}
               </Badge>
             </div>
             
-            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
+            <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400 flex-wrap">
               {!isAtomic && (
                 <>
-                  <span className="flex items-center gap-1 font-medium bg-muted/40 px-1.5 py-0.5 rounded">
+                  <span className="flex items-center gap-1 font-medium bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">
                     <FileText className="w-3 h-3" /> {record.files?.length || 0} Files
                   </span>
                   <span>•</span>
                 </>
               )}
-              <span className="truncate max-w-[150px]">{review.project || "General / All Company"}</span>
+              <span className="truncate max-w-[150px] text-gray-300">{review.project || "General / All Company"}</span>
               <span>•</span>
-              <span className="font-mono">{review.targetMonth || "M3"} / {review.targetYear || "2026"}</span>
+              <span className="font-mono text-gray-300">{review.targetMonth || "M3"} / {review.targetYear || "2026"}</span>
               <span>•</span>
               <span>By {review.reviewedBy || record.reviewedBy || "Ahmed khaled"}</span>
               <span>•</span>
@@ -92,14 +92,14 @@ export function RecordCard({ record, onViewDetails, onDeleteFile, onDeleteRecord
             </div>
 
             {record.files && record.files.length > 0 && !isAtomic && (
-              <div className="mt-2.5 flex flex-wrap gap-1.5 pt-2 border-t border-border/40">
+              <div className="mt-2.5 flex flex-wrap gap-1.5 pt-2 border-t border-gray-700">
                 {record.files.map((file, idx) => (
                   <a 
                     key={idx} 
                     href={file.webViewLink || record.folderLink || '#'} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-[9px] font-mono hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors bg-muted/50 border border-border/80 text-muted-foreground px-2 py-0.5 rounded-md truncate max-w-[180px] flex items-center gap-1"
+                    className="text-[9px] font-mono hover:bg-blue-600 hover:text-white transition-colors bg-gray-800 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-md truncate max-w-[180px] flex items-center gap-1"
                     title="Open in Drive"
                   >
                     <FileText className="w-2.5 h-2.5 shrink-0" />
