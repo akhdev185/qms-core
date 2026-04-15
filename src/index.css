@@ -1,6 +1,10 @@
 /* ══════════════════════════════════════════════════
-  QMS REDESIGN 2026 - V3 - Clean & Professional
-  Muted colors, high contrast, easy on eyes
+  QMS REDESIGN 2026 - V4 - Enterprise Soft Dark
+  Based on Ahmed's design spec
+  
+  Theme: "Soft Dark Enterprise"
+  Inspired by: Notion + Linear + Stripe Dashboard
+  Goal: "Clear - Calm - Data-focused - Easy on eyes"
 ═════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -10,116 +14,110 @@
 
 @layer base {
   :root {
-    /* ═══════════════════════════════════════════
-       CLEAN COLOR PALETTE - V3 (2026-04-15)
-       Professional, muted, high contrast
-    ═══════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════
+       COLOR SYSTEM V4
+    ══════════════════════════════════════════════════ */
     
-    /* Primary - Muted Blue */
-    --primary: 217 85% 45%;
-    --primary-light: 217 85% 55%;
-    --primary-dark: 217 85% 35%;
+    /* Primary (Indigo) - Brand Identity */
+    --primary: 239 84% 67%;
+    --primary-light: 239 84% 77%;
+    --primary-dark: 239 84% 57%;
     --primary-foreground: 0 0% 100%;
+    --primary-soft: rgba(99, 102, 241, 0.15);
     
-    /* Secondary - Slate */
-    --secondary: 215 25% 35%;
-    --secondary-light: 215 25% 45%;
-    --secondary-dark: 215 25% 25%;
+    /* Secondary */
+    --secondary: 215 25% 27%;
+    --secondary-light: 215 25% 37%;
+    --secondary-dark: 215 25% 17%;
     --secondary-foreground: 0 0% 100%;
     
-    /* Accent - Teal */
+    /* Accent */
     --accent: 170 60% 40%;
     --accent-light: 170 60% 50%;
     --accent-dark: 170 60% 30%;
     --accent-foreground: 0 0% 100%;
     
-    /* Status - Clean */
-    --success: 142 70% 40%;
-    --success-light: 142 70% 50%;
-    --success-dark: 142 70% 30%;
+    /* Status Colors */
+    --success: 142 70% 45%;
+    --success-light: 142 70% 55%;
+    --success-dark: 142 70% 35%;
     --success-foreground: 0 0% 100%;
     
-    --warning: 45 90% 50%;
-    --warning-light: 45 90% 60%;
-    --warning-dark: 45 90% 40%;
+    --warning: 38 95% 50%;
+    --warning-light: 38 95% 60%;
+    --warning-dark: 38 95% 40%;
     --warning-foreground: 0 0% 0%;
     
-    --destructive: 0 70% 45%;
-    --destructive-light: 0 70% 55%;
-    --destructive-dark: 0 70% 35%;
+    --destructive: 0 84% 60%;
+    --destructive-light: 0 84% 70%;
+    --destructive-dark: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
     
-    --info: 199 80% 45%;
-    --info-light: 199 80% 55%;
-    --info-dark: 199 80% 35%;
+    --info: 199 89% 48%;
+    --info-light: 199 89% 58%;
+    --info-dark: 199 89% 38%;
     --info-foreground: 0 0% 100%;
 
-    /* ═══════════════════════════════════════════
-       BACKGROUND - Clean Slate Dark
-    ═══════════════════════════════════════════ */
-    --background: 215 28% 7%;
-    --background-secondary: 215 28% 9%;
-    --foreground: 210 40% 98%;
-    --foreground-muted: 215 20% 75%;
+    /* ══════════════════════════════════════════════════
+       BACKGROUNDS - Dark Scale
+    ══════════════════════════════════════════════════ */
+    --background: 222 47% 6%;        /* #0f172a - Main bg */
+    --background-secondary: 217 41% 9%; /* #111827 - Sidebar */
+    --foreground: 210 40% 98%;        /* #f8fafc - White text */
+    --foreground-muted: 215 20% 60%;  /* #94a3b8 - Secondary text */
+    --foreground-muted2: 215 20% 50%; /* #64748b - Muted text */
     
-    --card: 215 28% 10%;
-    --card-hover: 215 28% 13%;
-    --card-foreground: 210 40% 96%;
+    --card: 217 41% 15%;            /* #1e293b - Card bg */
+    --card-hover: 217 41% 20%;      /* #273449 - Card hover */
+    --card-foreground: 210 40% 98%;
     
-    --popover: 215 28% 10%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 217 41% 15%;
+    --popover-foreground: 210 40% 98%;
     
-    --muted: 215 25% 15%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 217 41% 18%;          /* #334155 - Elevated */
+    --muted-foreground: 215 20% 60%;
     
-    --accent: 215 25% 18%;
+    --accent: 217 41% 20%;
     --accent-foreground: 210 40% 90%;
     
-    --border: 215 25% 22%;
-    --border-light: 215 25% 30%;
-    --input: 215 25% 22%;
-    --ring: 217 85% 45%;
+    --border: 217 41% 18%;          /* #334155 */
+    --border-light: 217 41% 25%;
+    --input: 217 41% 18%;
+    --ring: 239 84% 67%;
 
-    /* ═══════════════════════════════════════════
-       TYPOGRAPHY - Outfit
-    ═══════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════
+       TYPOGRAPHY
+    ══════════════════════════════════════════════════ */
     --font-heading: 'Outfit', sans-serif;
     --font-body: 'Outfit', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* ═══════════════════════════════════════════
-       RADIUS - Clean
-    ═══════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════
+       RADIUS - Clean rounded
+    ══════════════════════════════════════════════════ */
     --radius: 10px;
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
-    --radius-xl: 16px;
-    --radius-2xl: 20px;
+    --radius-xl: 14px;
+    --radius-2xl: 16px;
     --radius-full: 9999px;
 
-    /* ═══════════════════════════════════════════
+    /* ═══════════════════════════════════════════════════
        SHADOWS - Subtle
-    ═══════════════════════════════════════════ */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    ══════════════════════════════════════════════════ */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.3), 0 1px 2px -2px rgb(0 0 0 / 0.2);
-    --shadow-lg: 0 6px 10px -3px rgb(0 0 0 / 0.4), 0 2px 4px -4px rgb(0 0 0 / 0.3);
-    --shadow-xl: 0 12px 20px -5px rgb(0 0 0 / 0.5), 0 5px 8px -6px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 4px 8px -2px rgb(0 0 0 / 0.4), 0 2px 4px -3px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 8px 16px -4px rgb(0 0 0 / 0.5), 0 4px 8px -5px rgb(0 0 0 / 0.4);
     
-    --shadow-primary: 0 3px 10px -3px rgb(56 133 255 / 0.25);
-    --shadow-success: 0 3px 10px -3px rgb(34 197 94 / 0.25);
-    --shadow-warning: 0 3px 10px -3px rgb(234 179 8 / 0.25);
-    --shadow-destructive: 0 3px 10px -3px rgb(239 68 68 / 0.25);
-
-    /* ═══════════════════════════════════════════
-       ANIMATIONS
-    ═══════════════════════════════════════════ */
-    --animate-bounce: bounce 1s infinite;
-    --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    --animate-spin: spin 1s linear infinite;
+    --shadow-primary: 0 2px 8px -2px rgba(99, 102, 241, 0.3);
+    --shadow-success: 0 2px 8px -2px rgba(34, 197, 94, 0.3);
+    --shadow-warning: 0 2px 8px -2px rgba(245, 158, 11, 0.3);
+    --shadow-destructive: 0 2px 8px -2px rgba(239, 68, 68, 0.3);
   }
 
-  /* Light mode */
+  /* Light mode override - using dark as default */
   .light {
     --background: 210 40% 96%;
     --background-secondary: 210 40% 98%;
@@ -127,16 +125,8 @@
     --foreground-muted: 215 20% 40%;
     --card: 0 0% 100%;
     --card-hover: 210 40% 96%;
-    --card-foreground: 215 28% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 28% 10%;
     --muted: 210 40% 92%;
-    --muted-foreground: 215 20% 45%;
-    --accent: 210 40% 88%;
-    --accent-foreground: 215 28% 10%;
     --border: 214 14% 85%;
-    --border-light: 214 14% 75%;
-    --input: 214 14% 85%;
   }
   
   * {
@@ -146,6 +136,7 @@
   body {
     font-family: var(--font-body);
     background: var(--background);
+    color: var(--foreground);
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -156,142 +147,34 @@
 }
 
 /* ══════════════════════════════════════════════════
-   CARD - Clean & Simple
+   COMPONENTS V4
 ═════════════════════════════════════════════════ */
-.card-glass {
+
+/* Card - Enterprise Style */
+.card-v4 {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  padding: 1rem;
   transition: all 0.2s ease;
 }
 
-.card-glass:hover {
+.card-v4:hover {
   background: var(--card-hover);
-  border-color: var(--border-light);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
 
-/* .glass-card for backwards compatibility */
-.glass-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ══════════════════════════════════════════════════
-   STATS CARD
-═════════════════════════════════════════════════ */
-.stat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem;
-  transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-  background: var(--card-hover);
-  border-color: var(--border-light);
-}
-
-.stat-card .stat-value {
-  font-family: var(--font-heading);
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-}
-
-.stat-card .stat-label {
-  font-size: 0.8125rem;
-  color: var(--foreground-muted);
-  font-weight: 500;
-}
-
-.stat-card .stat-change {
-  @apply text-xs font-medium flex items-center gap-1;
-}
-
-.stat-change.positive {
-  color: var(--success);
-}
-
-.stat-change.negative {
-  color: var(--destructive);
-}
-
-/* ══════════════════════════════════════════════════
-   BUTTONS - Clean
-═════════════════════════════════════════════════ */
-.btn-primary {
-  @apply inline-flex items-center justify-center font-semibold transition-all duration-200;
-  @apply px-4 py-2 rounded-lg text-sm;
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-}
-
-.btn-primary:hover {
-  background: hsl(var(--primary-light));
-  box-shadow: var(--shadow-primary);
-}
-
-.btn-secondary {
-  @apply inline-flex items-center justify-center font-semibold transition-all duration-200;
-  @apply px-4 py-2 rounded-lg text-sm;
-  background: var(--muted);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-  background: var(--accent);
-  border-color: var(--border-light);
-}
-
-.btn-ghost {
-  @apply inline-flex items-center justify-center font-medium transition-all duration-150;
-  @apply px-3 py-1.5 rounded-md text-sm;
-  color: var(--foreground-muted);
-}
-
-.btn-ghost:hover {
-  background: var(--muted);
-  color: var(--foreground);
-}
-
-/* ══════════════════════════════════════════════════
-   INPUT - Clean
-═════════════════════════════════════════════════ */
-.input-modern {
-  @apply w-full bg-background border border-border rounded-md px-3 py-2 text-sm;
-  @apply transition-all duration-200;
-  color: var(--foreground);
-}
-
-.input-modern::placeholder {
-  color: var(--foreground-muted);
-}
-
-.input-modern:focus {
-  outline: none;
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 3px rgba(56, 133, 255, 0.15);
-}
-
-/* ══════════════════════════════════════════════════
-   SIDEBAR - Clean
-═════════════════════════════════════════════════ */
-.sidebar {
-  @apply fixed left-0 top-0 h-full w-60 z-40;
+/* Sidebar */
+.sidebar-v4 {
   background: var(--background-secondary);
   border-right: 1px solid var(--border);
 }
 
 .sidebar-item {
-  @apply flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium;
   color: var(--foreground-muted);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
   transition: all 0.15s ease;
 }
 
@@ -301,78 +184,142 @@
 }
 
 .sidebar-item.active {
-  background: hsl(var(--primary) / 0.15);
+  background: var(--primary-soft);
   color: hsl(var(--primary));
+  border-left: 3px solid hsl(var(--primary));
 }
 
-/* ══════════════════════════════════════════════════
-   HEADER - Clean
-═════════════════════════════════════════════════ */
-.header {
-  @apply sticky top-0 z-30;
-  background: var(--background-secondary);
+/* Header */
+.header-v4 {
+  background: var(--background);
   border-bottom: 1px solid var(--border);
+  height: 64px;
 }
 
-/* ══════════════════════════════════════════════════
-   BADGE - Clean
-═════════════════════════════════════════════════ */
-.badge-modern {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold;
+/* Buttons */
+.btn-primary-v4 {
+  background: linear-gradient(135deg, hsl(239 84% 67%), hsl(239 84% 57%));
+  border-radius: var(--radius-lg);
+  padding: 8px 16px;
+  font-weight: 600;
+  color: white;
+  transition: all 0.2s ease;
 }
 
-.badge-success {
+.btn-primary-v4:hover {
+  box-shadow: var(--shadow-primary);
+  transform: translateY(-1px);
+}
+
+.btn-secondary-v4 {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px 16px;
+  color: var(--foreground-muted);
+}
+
+.btn-secondary-v4:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+/* Input */
+.input-v4 {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  color: var(--foreground);
+}
+
+.input-v4:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* Status Badges */
+.badge-success-v4 {
   background: rgba(34, 197, 94, 0.15);
   color: #22c55e;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
 }
 
-.badge-warning {
-  background: rgba(234, 179, 8, 0.15);
-  color: #eab308;
-}
-
-.badge-error {
+.badge-danger-v4 {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
 }
 
-.badge-info {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+.badge-warning-v4 {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
 }
 
-/* ══════════════════════════════════════════════════════════
-   TABLE - Clean
-═════════════════════════════════════════════════ */
-.table-modern {
-  @apply w-full text-sm;
-}
-
-.table-modern th {
-  @apply text-left px-3 py-2.5 font-semibold text-xs uppercase tracking-wider;
+/* File Tags */
+.file-tag {
+  background: var(--muted);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
   color: var(--foreground-muted);
+}
+
+.file-tag:hover {
+  background: var(--card-hover);
+  color: var(--foreground);
+}
+
+/* Table */
+.table-v4 {
+  width: 100%;
+}
+
+.table-v4 th {
+  color: var(--foreground-muted2);
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
 
-.table-modern td {
-  @apply px-3 py-2.5 border-b border-border/50;
+.table-v4 td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-.table-modern tr:hover td {
-  background: var(--muted);
+.table-v4 tr:hover td {
+  background: var(--card);
 }
 
-/* ══════════════════════════════════════════════════
-   UTILITIES
-═════════════════════════════════════════════════ */
-.text-gradient {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Stats Card */
+.stat-card-v4 {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
 }
 
-/* Fade in */
+.stat-card-v4 .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.stat-card-v4 .stat-label {
+  font-size: 14px;
+  color: var(--foreground-muted);
+}
+
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -388,58 +335,7 @@
 }
 
 .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 40ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 80ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 120ms; }
-.stagger-children > *:nth-child(5) { animation-delay: 160ms; }
-.stagger-children > *:nth-child(6) { animation-delay: 200ms; }
-/* Record Card Improvements */
-.record-item {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1rem;
-  transition: all 0.2s ease;
-}
-
-.record-item:hover {
-  background: var(--card-hover);
-  border-color: var(--border-light);
-}
-
-.record-code {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--primary);
-}
-
-.record-name {
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--foreground);
-}
-
-.record-detail {
-  font-size: 0.8125rem;
-  color: var(--foreground-muted);
-}
-
-/* Status badges */
-.status-approved {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.status-rejected {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.status-pending {
-  background: rgba(234, 179, 8, 0.15);
-  color: #eab308;
-  border: 1px solid rgba(234, 179, 8, 0.3);
-}
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
