@@ -86,7 +86,7 @@ export default function AuditPage() {
   };
 
   // Bulk status change: updates all files in a tab to a new status
-  const handleBulkStatusChange = useCallback(async (items: unknown[], newStatus: string) => {
+  const handleBulkStatusChange = useCallback(async (items: any[], newStatus: string) => {
     if (items.length === 0) return;
     setBulkLoading(true);
     const reviewerName = user?.name || user?.email || "System";
@@ -259,7 +259,7 @@ export default function AuditPage() {
     records.forEach(r => {
       if (r.category) cats.add(r.category);
       if (r.fileReviews) {
-        Object.values(r.fileReviews).forEach((review: unknown) => {
+        Object.values(r.fileReviews).forEach((review: any) => {
           if (review.project) projs.add(review.project);
           if (review.targetYear) yrs.add(review.targetYear.toString());
         });
@@ -282,7 +282,7 @@ export default function AuditPage() {
     };
 
     const searchLower = search.toLowerCase();
-    const matchesSearch = (r: unknown) => {
+    const matchesSearch = (r: any) => {
       if (!search) return true;
       return (
         r.code?.toLowerCase().includes(searchLower) ||
@@ -291,11 +291,11 @@ export default function AuditPage() {
         r.fileName?.toLowerCase().includes(searchLower)
       );
     };
-    const matchesCategory = (r: unknown) => categoryFilter === "all" || r.category === categoryFilter;
+    const matchesCategory = (r: any) => categoryFilter === "all" || r.category === categoryFilter;
 
-    const pending: unknown[] = [];
-    const compliant: unknown[] = [];
-    const issuesList: unknown[] = [];
+    const pending: any[] = [];
+    const compliant: any[] = [];
+    const issuesList: any[] = [];
 
     records.forEach(record => {
       const files = record.files || [];
@@ -406,11 +406,11 @@ export default function AuditPage() {
 
   const handleExportCSV = useCallback(() => {
     if (currentTabData.length === 0) return;
-    const isAtomic = currentTabData[0]?.isAtomic;
+    const isAtomic = currentTabData[0]?.isAtomic as any;
     const headers = isAtomic
       ? ["Code", "Record Name", "Category", "File Name", "Status", "Reviewed By"]
       : ["Code", "Record Name", "Category", "Description", "Last Filed", "Frequency"];
-    const rows = currentTabData.map((r: unknown) =>
+    const rows = currentTabData.map((r: any) =>
       isAtomic
         ? [r.code, r.recordName, r.category, r.fileName || "", r.fileStatus || "", r.fileReviewedBy || ""]
         : [r.code, r.recordName, r.category, r.description || "", r.lastFileDate || "", r.fillFrequency || ""]

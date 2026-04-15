@@ -137,7 +137,7 @@ export default function ModulePage() {
     if (!filteredRecords) return [];
 
     // Sort all files across all forms by creation date
-    const allFiles: unknown[] = [];
+    const allFiles: any[] = [];
     filteredRecords.forEach(record => {
       (record.files || []).forEach(file => {
         allFiles.push({
@@ -156,7 +156,7 @@ export default function ModulePage() {
   const groupedModuleFiles = useMemo(() => {
     const groups: Record<string, { record: QMSRecord, files: unknown[] }> = {};
 
-    moduleFiles.forEach((file: unknown) => {
+    moduleFiles.forEach((file: any) => {
       const code = file.parentRecord.code;
       if (!groups[code]) {
         groups[code] = {
