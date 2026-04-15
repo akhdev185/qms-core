@@ -300,7 +300,7 @@ export default function AuditPage() {
     records.forEach(record => {
       const files = record.files || [];
       const reviews = record.fileReviews || {};
-      const recordLevelStatus = reviews?.recordStatus;
+      const recordLevelStatus = (reviews as any)?.recordStatus;
       
       files.forEach(file => {
         const review = reviews[file.id] || { status: 'pending_review', comment: '' };
@@ -360,7 +360,7 @@ export default function AuditPage() {
       const entry = catMap.get(cat)!;
       const files = record.files || [];
       const reviews = record.fileReviews || {};
-      const recordLevelStatus = reviews?.recordStatus;
+      const recordLevelStatus = (reviews as any)?.recordStatus;
 
       files.forEach(file => {
         const review = reviews[file.id] || { status: 'pending_review' };
