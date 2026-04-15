@@ -107,7 +107,7 @@ export default function AuditPage() {
         fileIds.forEach(fileId => {
           updatedReviews[fileId] = {
             ...(updatedReviews[fileId] || {}),
-            status: newStatus,
+            status: newStatus as any,
             reviewedBy: reviewerName,
             date: new Date().toISOString(),
           };

@@ -68,22 +68,6 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
         }
     };
 
-    useEffect(() => {
-        // Auto-expand if there are pending files or in flat mode
-        const hasPending = record.files?.some(file => {
-            const review = record.fileReviews?.[file.id];
-            return !review || (review.status !== 'approved' && review.status !== 'rejected');
-        });
-
-        if (hasPending || isFlat) {
-            setIsExpanded(true);
-        }
-
-        if (isExpanded && files.length === 0 && !record.files) {
-            loadFiles();
-        }
-    }, [isExpanded, files.length, record.files, record.fileReviews, isFlat, loadFiles]);
-
     const loadFiles = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -98,6 +82,21 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
             setIsLoading(false);
         }
     }, [record.folderLink]);
+
+    useEffect(() => {
+        const hasPending = record.files?.some(file => {
+            const review = record.fileReviews?.[file.id];
+            return !review || (review.status !== 'approved' && review.status !== 'rejected');
+        });
+
+        if (hasPending || isFlat) {
+            setIsExpanded(true);
+        }
+
+        if (isExpanded && files.length === 0 && !record.files) {
+            loadFiles();
+        }
+    }, [isExpanded, files.length, record.files, record.fileReviews, isFlat, loadFiles]);
 
     const recordStatus = parseStatusFromAuditField(record.auditStatus);
 
@@ -367,8 +366,8 @@ export function RecordBrowser({ record, isFlat = false }: RecordBrowserProps) {
                                                                     <CalendarDays className="w-3 h-3" />
                                                                     {formatTimeAgo(file.createdTime)}
                                                                 </span>
-                                                                <span className="hidden md:inline font-medium text-foreground/60">• {review.project || "General"}</span>
-                                                                <span className="hidden md:inline font-mono text-foreground/50">• M{review.targetMonth || "—"}/{review.targetYear || "—"}</span>
+                                                                <span className="hidden md:inline font-medium text-foreground/60">• {(review as any).project || "General"}</span>
+                                                                <span className="hidden md:inline font-mono text-foreground/50">• M{(review as any).targetMonth || "—"}/{(review as any).targetYear || "—"}</span>
                                                             </div>
                                                         </div>
                                                     </div>
