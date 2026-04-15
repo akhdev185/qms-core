@@ -69,7 +69,6 @@ export default function ArchivePage() {
       }
     });
   }, [loadArchivedFiles, toast]);
-  }, [toast]);
 
   // Filtered & sorted files
   const filteredFiles = useMemo(() => {
