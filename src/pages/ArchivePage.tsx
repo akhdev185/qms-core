@@ -47,16 +47,6 @@ export default function ArchivePage() {
     return () => window.removeEventListener('qms-sidebar-toggle', handleToggle as EventListener);
   }, []);
 
-  useEffect(() => {
-    loadArchivedFiles();
-    checkAndCleanupExpiredArchives().then(count => {
-      if (count > 0) {
-        toast({ title: "Auto-Cleanup", description: `Removed ${count} expired files from archive.` });
-        loadArchivedFiles();
-      }
-    });
-  }, [loadArchivedFiles, toast]);
-
   const loadArchivedFiles = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -69,6 +59,16 @@ export default function ArchivePage() {
       setIsLoading(false);
     }
   }, [toast]);
+
+  useEffect(() => {
+    loadArchivedFiles();
+    checkAndCleanupExpiredArchives().then(count => {
+      if (count > 0) {
+        toast({ title: "Auto-Cleanup", description: `Removed ${count} expired files from archive.` });
+        loadArchivedFiles();
+      }
+    });
+  }, [loadArchivedFiles, toast]);
 
   // Filtered & sorted files
   const filteredFiles = useMemo(() => {

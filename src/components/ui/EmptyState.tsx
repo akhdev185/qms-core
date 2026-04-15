@@ -1,5 +1,6 @@
 import { Inbox, FileX, SearchX, FolderOpen } from 'lucide-react';
 import { Button } from './button';
+import { cn } from '@/lib/utils';
 
 type EmptyStateVariant = 'default' | 'search' | 'no-results' | 'no-files' | 'custom';
 

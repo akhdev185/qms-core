@@ -206,7 +206,7 @@ export async function bulkApproveRecords(
  * @returns Number of successfully rejected records
  */
 export async function bulkRejectRecords(
-    records: unknown[],
+    records: StatusRecord[],
     reviewedBy: string
 ): Promise<number> {
     let successCount = 0;
@@ -238,7 +238,7 @@ export function getStatusBadgeClass(status: RecordStatus): string {
 /**
  * Get status statistics from records
  */
-export function getStatusStats(records: unknown[]): {
+export function getStatusStats(records: any[]): {
     draft: number;
     pending_review: number;
     approved: number;
@@ -253,8 +253,7 @@ export function getStatusStats(records: unknown[]): {
         total: records.length,
     };
 
-    records.forEach(record => {
-        // Priority 1: Check metadata JSON status if it exists
+    records.forEach((record: any) => {
         const metadataStatus = record.fileReviews?.recordStatus;
         let status: RecordStatus;
         
