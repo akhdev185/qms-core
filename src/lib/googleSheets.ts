@@ -148,7 +148,7 @@ const MODULE_MAPPINGS: Record<string, { id: string; name: string; order: number 
 };
 
 export function normalizeCategory(category: string): { id: string; name: string } | null {
-  if (!category) return { error: "Failed to parse" };
+  if (!category) return null;
 
   const lower = category.toLowerCase().trim();
 
@@ -159,7 +159,7 @@ export function normalizeCategory(category: string): { id: string; name: string 
     }
   }
 
-  return { error: "Failed to parse" };
+  return null;
 }
 
 function isValidRecord(row: string[]): boolean {
@@ -192,7 +192,7 @@ function normalizeAuditStatus(status: string): "compliant" | "pending" | "issue"
 }
 
 function parseDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr.trim() === "") return { error: "Failed to parse" };
+  if (!dateStr || dateStr.trim() === "") return null;
 
   const date = new Date(dateStr);
   return isNaN(date.getTime()) ? null : date;
@@ -231,7 +231,7 @@ export async function fetchSheetData(): Promise<QMSRecord[]> {
     }
 
     // Parse file reviews from Column P (index 15)
-    let fileReviews: unknown = {};
+    let fileReviews: Record<string, any> = {};
     if (row[15]) {
       try {
         fileReviews = JSON.parse(row[15]);
@@ -266,7 +266,7 @@ export async function fetchSheetData(): Promise<QMSRecord[]> {
       reviewedBy: row[13] || "",
       reviewDate: row[14] || "", // Column O is index 14
       actualRecordCount: parsedCount,
-      fileReviews: fileReviews,
+      fileReviews: fileReviews as Record<string, FileReview>,
       ...calculateFillStats(row[4] || "", row[8] || ""), // Pass 'When to Fill' and 'Last File Date'
     });
   }
