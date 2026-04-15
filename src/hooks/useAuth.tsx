@@ -21,13 +21,12 @@ type AuthContextValue = {
   user: AppUser | null;
   users: AppUser[];
   login: (email: string, password: string) => Promise<{ ok: boolean; code: string; message: string; user?: AppUser; backend: "supabase" | "local" }>;
-
   logout: () => void;
   addUser: (user: Omit<AppUser, "id">) => Promise<void>;
   updateUser: (id: string, updates: Partial<AppUser>) => Promise<void>;
   removeUser: (id: string) => Promise<void>;
   resetPassword: (email: string) => Promise<{ ok: boolean; message: string }>;
-  changePassword: (id: string, oldPass: string, newPass: string) => boolean;
+  changePassword: (id: string, oldPass: string, newPass: string) => Promise<boolean>;
   reloadUsers: () => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<{ ok: boolean; message: string }>;
   loading: boolean;
@@ -39,7 +38,6 @@ const ACTIVATED_KEY = "qms_activated_emails";
 
 const AUTH_LOCAL_DISABLED = (((import.meta as unknown as { env?: Record<string, unknown> }).env?.VITE_AUTH_LOCAL_DISABLED) ?? "true") === "true";
 
-// Simple hash function for local password storage (SHA-256)
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const salt = (((import.meta as unknown as { env?: Record<string, unknown> }).env?.VITE_AUTH_SALT) as string) || "qms-salt-2026-v1";
@@ -114,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: crypto.randomUUID(),
         name: "admin",
         email: "admin@local",
-        password: "SET_ON_FIRST_LOGIN", // Will be hashed on first login comparison
+        password: "SET_ON_FIRST_LOGIN",
         role: "admin",
         active: true,
         lastLoginAt: 0,
@@ -130,24 +128,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [supabaseDisabled, setSupabaseDisabled] = React.useState(false);
   const isFetchingRef = React.useRef<string | null>(null);
-  const syncUserProfileRef = React.useRef<(session: unknown) => Promise<void>>();
+  const syncUserProfileRef = React.useRef<(session: any) => Promise<void>>();
   const lastSyncTimestampRef = React.useRef<number>(0);
 
-  // Helper for timeouts with retry
-  const withTimeout = async <T,>(promise: Promise<unknown>, timeoutMs: number = 5000): Promise<T> => {
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number = 5000): Promise<T> => {
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Timeout")), timeoutMs)
     );
-    return Promise.race([promise, timeout]) as Promise<T>;
+    return Promise.race([promise, timeout]);
   };
 
-  const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 1, delayMs: number = 1000, abortOnTimeout: boolean = false): Promise<T> => {
+  const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 1, delayMs: number = 1000): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
       try {
         return await fn();
-      } catch (err: unknown) {
-        if (i === retries || (abortOnTimeout && err.message === "Timeout")) throw err;
-        console.warn(`[AUTH] Retry ${i + 1}/${retries} after error:`, err.message);
+      } catch (err: any) {
+        if (i === retries) throw err;
+        console.warn(`[AUTH] Retry ${i + 1}/${retries} after error:`, err?.message);
         await new Promise(r => setTimeout(r, delayMs));
       }
     }
@@ -164,14 +161,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: roles, error: rErr } = await supabase.from("user_roles").select("*");
       const roleMap = new Map();
       if (!rErr && roles) {
-        roles.forEach(r => roleMap.set(r.user_id, r.role?.toLowerCase()));
+        roles.forEach((r: any) => roleMap.set(r.user_id, r.role?.toLowerCase()));
       }
 
       const mapped = (profiles || []).map((r: ProfileRow) => ({
         id: r.user_id || r.id,
         name: r.display_name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
         email: r.email || "",
-        password: "", // SECURITY: Never expose password hashes to frontend
+        password: "",
         role: (roleMap.get(r.user_id || r.id) || "user") as Role,
         active: !!(r.is_active ?? false),
         lastLoginAt: r.last_login ? new Date(r.last_login).getTime() : 0,
@@ -181,12 +178,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUsers(mapped);
       if (!AUTH_LOCAL_DISABLED) saveUsersLocal(mapped);
     } catch (e) {
-      console.error("Error");
+      console.error("Error fetching users list");
     }
   }, [supabaseDisabled]);
 
-  // Internal helper to sync user profile and role from Supabase
-  const syncUserProfile = React.useCallback(async (session: unknown) => {
+  const syncUserProfile = React.useCallback(async (session: any) => {
     if (!session?.user) {
       setUser(null);
       saveSession(null);
@@ -196,10 +192,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const authUserId = session.user.id;
     const email = session.user.email || "";
 
-    // Debounce: skip if synced within last 10 seconds for same user
     const now = Date.now();
     if (isFetchingRef.current === authUserId || (now - lastSyncTimestampRef.current < 10000)) {
-      // Still use cache optimistically
       const cached = loadSession();
       if (cached && cached.userId === authUserId && !user) {
         setUser({
@@ -213,7 +207,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isFetchingRef.current = authUserId;
     lastSyncTimestampRef.current = now;
 
-    // OPTIMISTIC: Use cached role immediately
     const cached = loadSession();
     if (cached && cached.userId === authUserId) {
       setUser({
@@ -224,10 +217,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const [profileRes, roleRes] = await withRetry(() => Promise.all([
-        withTimeout<ProfileRow | null>(supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle(), 8000),
-        withTimeout<ProfileRow | null>(supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle(), 8000),
-      ]), 1, 1000, false);
+      const [profileRes, roleRes]: any[] = await withRetry(() => Promise.all([
+        withTimeout(supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle(), 8000),
+        withTimeout(supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle(), 8000),
+      ]), 1, 1000);
 
       const profile = profileRes?.data;
       const roleData = roleRes?.data;
@@ -262,14 +255,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setUser(fallbackUser);
       }
-    } catch (err: unknown) {
-      console.warn("[AUTH] Profile sync failed, using cache:", err.message);
+    } catch (err: any) {
+      console.warn("[AUTH] Profile sync failed, using cache:", err?.message);
     } finally {
       isFetchingRef.current = null;
     }
   }, [fetchFullUsersList, user]);
 
-  // Keep ref in sync
   syncUserProfileRef.current = syncUserProfile;
 
   React.useEffect(() => {
@@ -309,7 +301,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (mounted) setLoading(false);
       } catch (err) {
-        console.error("Error");
+        console.error("Bootstrap error");
         if (mounted) setLoading(false);
       }
       bootstrapDone = true;
@@ -362,13 +354,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           const rows = Array.isArray(data) ? data : [];
-          let rolesRows: unknown[] = [];
+          let rolesRows: any[] = [];
           try {
             const { data: rolesData } = await supabase.from("user_roles").select("*");
             rolesRows = Array.isArray(rolesData) ? rolesData : [];
           } catch { /* non-critical */ }
           const roleByUserId = new Map<string, string>();
-          rolesRows.forEach((r: ProfileRow) => {
+          rolesRows.forEach((r: any) => {
             if (r && typeof r.user_id === "string" && typeof r.role === "string") {
               roleByUserId.set(r.user_id, r.role.toLowerCase());
             }
@@ -380,7 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: r.user_id || r.id,
               name: r.display_name || (typeof r.email === "string" ? String(r.email).split("@")[0] : "user"),
               email: r.email || "",
-              password: "", // SECURITY: Never expose password hashes to frontend
+              password: "",
               role: role as Role,
               active: !!(r.is_active ?? false),
               lastLoginAt: lastLogin,
@@ -396,7 +388,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(u);
           }
         } catch (e) {
-          console.error("Error");
+          console.error("Error reloading users");
           setSupabaseDisabled(true);
         }
       } else {
@@ -427,7 +419,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const authUserId = data.user.id;
 
-      // Create profile (is_active: false for admin approval)
       const { error: pErr } = await supabase.from("profiles").insert({
         id: crypto.randomUUID(),
         user_id: authUserId,
@@ -439,7 +430,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (pErr) return { ok: false, message: `Profile creation failed: ${pErr.message}` };
 
-      // Create role
       const { error: rErr } = await supabase.from("user_roles").insert({
         id: crypto.randomUUID(),
         user_id: authUserId,
@@ -449,13 +439,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (rErr) return { ok: false, message: `Role assignment failed: ${rErr.message}` };
 
       return { ok: true, message: "Registration successful. Pending admin approval." };
-    } catch (err: unknown) {
-      return { ok: false, message: err.message || "An unexpected error occurred during registration" };
+    } catch (err: any) {
+      return { ok: false, message: err?.message || "An unexpected error occurred during registration" };
     }
   }, []);
-
-  // NOTE: The onAuthStateChange listener is already set up in the bootstrap useEffect above (line ~303).
-  // Do NOT add a second listener here — it causes race conditions and double-fetching.
 
   React.useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -486,368 +473,219 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (backend === "supabase") {
       try {
         const { data: authRes, error: authErr } = await supabase!.auth.signInWithPassword({ email, password });
-        if (authErr || !authRes?.user?.id) {
-          console.warn("[AUTH] Supabase Auth rejected:", authErr?.message);
-          throw new Error("Supabase Auth failed");
+        if (authErr) {
+          return { ok: false, code: "auth_error", message: authErr.message, backend };
+        }
+        if (!authRes.user) {
+          return { ok: false, code: "no_user", message: "فشل تسجيل الدخول", backend };
         }
 
         const authUserId = authRes.user.id;
-        let profileRow: ProfileRow | null = null;
-        try {
-          const { data: profRows } = await supabase!
-            .from("profiles")
-            .select("*")
-            .eq("user_id", authUserId)
-            .maybeSingle();
-          profileRow = profRows as ProfileRow;
-        } catch { /* non-critical */ }
 
-        if (!profileRow) {
-          const { error: upErr } = await supabase!.from("profiles").insert({
-            id: crypto.randomUUID(),
-            user_id: authUserId,
-            email,
-            is_active: true,
-            last_login: new Date().toISOString(),
-          }).select().maybeSingle();
+        // Profile check
+        const { data: profile } = await supabase!.from("profiles").select("*").eq("user_id", authUserId).maybeSingle();
 
-          if (!upErr) {
-            try {
-              const { data: profRows2 } = await supabase!
-                .from("profiles")
-                .select("*")
-                .eq("user_id", authUserId)
-                .maybeSingle();
-              profileRow = profRows2 as ProfileRow;
-
-              await supabase.from("user_roles").insert({
-                id: crypto.randomUUID(),
-                user_id: authUserId,
-                role: "user",
-              });
-            } catch { /* non-critical */ }
-          }
+        if (!profile) {
+          return { ok: false, code: "no_profile", message: "لا يوجد حساب مرتبط", backend };
         }
 
-        let role = "user";
-        let is_active = true;
-        if (profileRow) is_active = !!(profileRow.is_active ?? true);
-
-        // Role Fetch Fallback from Supabase
-        if (role === "user") {
-          try {
-            const { data: rolesRows } = await supabase!
-              .from("user_roles")
-              .select("role")
-              .eq("user_id", authUserId)
-              .maybeSingle();
-            if (rolesRows?.role) role = String(rolesRows.role).toLowerCase();
-          } catch { /* non-critical */ }
-        }
-
-        if (!is_active) {
+        if (!profile.is_active) {
           await supabase!.auth.signOut();
-          return { ok: false, code: "inactive", message: "الحساب غير مفعل", backend };
+          return { ok: false, code: "inactive", message: "الحساب غير مفعل. انتظر موافقة المسؤول.", backend };
         }
 
-        const finalLastLogin = profileRow?.last_login ? new Date(profileRow.last_login).getTime() : Date.now();
-        const u: AppUser = {
+        const { data: roleData } = await supabase!.from("user_roles").select("role").eq("user_id", authUserId).maybeSingle();
+        const role = (roleData?.role as Role) || "user";
+
+        const appUser: AppUser = {
           id: authUserId,
-          name: profileRow?.display_name || email.split("@")[0],
+          name: profile.display_name || email.split("@")[0],
           email,
           password: "",
-          role: role as Role,
-          active: is_active,
-          lastLoginAt: finalLastLogin,
-          needsApprovalNotification: false,
+          role,
+          active: true,
+          lastLoginAt: Date.now(),
         };
 
-        setUsers(prev => {
-          const idx = prev.findIndex(x => x.id === u.id || x.email.toLowerCase() === u.email.toLowerCase());
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...u };
-            return copy;
-          }
-          return [...prev, u];
-        });
+        setUser(appUser);
+        saveSession(appUser.id, appUser.role, appUser.name);
 
-        setUser(u);
-        saveSession(u.id, u.role, u.name);
-        setSupabaseDisabled(false);
-        return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend };
+        // Update last_login
+        supabase!.from("profiles").update({ last_login: new Date().toISOString() }).eq("user_id", authUserId).then(() => {});
 
-      } catch (err) {
-        console.warn("[AUTH] Supabase Auth rejected, trying custom password column fallback...");
-        try {
-          const { data: prof, error: pErr } = await supabase!
-            .from("profiles")
-            .select("*")
-            .eq("email", email)
-            .maybeSingle();
-
-          // SECURITY: Compare hashed password instead of plain text
-          const hashedInput = await hashPassword(password);
-          if (!pErr && prof && prof.password === hashedInput) {
-            const authUserId = prof.user_id || prof.id;
-
-            let role = "user";
-            try {
-              const { data: rolesRows } = await supabase!
-                .from("user_roles")
-                .select("role")
-                .eq("user_id", authUserId)
-                .maybeSingle();
-              if (rolesRows?.role) role = String(rolesRows.role).toLowerCase();
-            } catch { /* non-critical */ }
-
-            const isActive = !!(prof.is_active ?? true);
-            if (!isActive) return { ok: false, code: "inactive", message: "الحساب غير مفعل", backend };
-
-            const u: AppUser = {
-              id: authUserId,
-              name: prof.display_name || email.split("@")[0],
-              email,
-              password: prof.password || "",
-              role: role as Role,
-              active: isActive,
-              lastLoginAt: prof.last_login ? new Date(prof.last_login).getTime() : Date.now(),
-              needsApprovalNotification: false,
-            };
-
-            setUser(u);
-            saveSession(u.id, u.role, u.name);
-            setSupabaseDisabled(false);
-            return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend };
-          }
-        } catch (fallbackErr) {
-          console.error("Error");
-        }
-        console.error("Error");
+        return { ok: true, code: "success", message: "تم تسجيل الدخول بنجاح", user: appUser, backend };
+      } catch (e: any) {
+        return { ok: false, code: "error", message: e?.message || "خطأ غير متوقع", backend };
       }
     }
 
-    // Browser-local fallback (Last resort)
-    if (!AUTH_LOCAL_DISABLED) {
-      const found = users.find(x => x.email.toLowerCase() === email.toLowerCase());
-      if (found) {
-        const hashedInput = await hashPassword(password);
-        if (hashedInput === found.password) {
-          const u = { ...found, lastLoginAt: Date.now(), needsApprovalNotification: false };
-          setUsers(users.map(x => (x.id === u.id ? u : x)));
-          setUser(u);
-          saveSession(u.id, u.role, u.name);
-          return { ok: true, code: "ok", message: "تم تسجيل الدخول", user: u, backend: "local" };
-        }
-      }
+    // Local fallback
+    if (AUTH_LOCAL_DISABLED) {
+      return { ok: false, code: "local_disabled", message: "Local auth is disabled", backend: "local" };
     }
 
-    return { ok: false, code: "failed", message: "بيانات الاعتماد غير صحيحة", backend };
-  }, [users, supabaseDisabled]);
-
-
-
-  const logout = React.useCallback(async () => {
-    if (supabase) {
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.warn("[AUTH] Supabase signOut error:", err);
-      }
+    const hashedPassword = await hashPassword(password);
+    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!found) {
+      return { ok: false, code: "user_not_found", message: "المستخدم غير موجود", backend: "local" };
     }
+    if (!found.active) {
+      return { ok: false, code: "inactive", message: "الحساب غير مفعل", backend: "local" };
+    }
+
+    // Check password
+    if (found.password === "SET_ON_FIRST_LOGIN") {
+      // First login for admin seed
+      const hashed = await hashPassword(password);
+      const updated = users.map(u => u.id === found.id ? { ...u, password: hashed, lastLoginAt: Date.now() } : u);
+      setUsers(updated);
+      saveUsersLocal(updated);
+      const loggedIn = { ...found, password: hashed, lastLoginAt: Date.now() };
+      setUser(loggedIn);
+      saveSession(loggedIn.id, loggedIn.role, loggedIn.name);
+      return { ok: true, code: "success", message: "تم تسجيل الدخول بنجاح", user: loggedIn, backend: "local" };
+    }
+
+    if (hashedPassword !== found.password) {
+      return { ok: false, code: "wrong_password", message: "كلمة المرور غير صحيحة", backend: "local" };
+    }
+
+    const updated = users.map(u => u.id === found.id ? { ...u, lastLoginAt: Date.now() } : u);
+    setUsers(updated);
+    saveUsersLocal(updated);
+    const loggedIn = { ...found, lastLoginAt: Date.now() };
+    setUser(loggedIn);
+    saveSession(loggedIn.id, loggedIn.role, loggedIn.name);
+    return { ok: true, code: "success", message: "تم تسجيل الدخول بنجاح", user: loggedIn, backend: "local" };
+  }, [users]);
+
+  const logout = React.useCallback(() => {
     setUser(null);
     saveSession(null);
-    // Clear all potential auth data from localStorage
-    localStorage.removeItem(SESSION_KEY);
-    // Force a full reload to clear any remaining in-memory state/listeners
-    window.location.href = "/login";
+    if (supabase) {
+      supabase.auth.signOut().catch(() => {});
+    }
   }, []);
 
-  const addUser = React.useCallback(async (userInput: Omit<AppUser, "id">) => {
-    const newUser: AppUser = { ...userInput, id: crypto.randomUUID() };
-    const updated = [...users, newUser];
-    setUsers(updated);
-    if (!AUTH_LOCAL_DISABLED) {
-      saveUsersLocal(updated);
-    }
-    if (supabase) {
-      // SECURITY: Hash password before storing in profiles table
-      const { error: profileErr } = await supabase.from("profiles").insert({
-        id: newUser.id,
-        user_id: newUser.id,
-        display_name: newUser.name,
-        email: newUser.email,
-        password: await hashPassword(newUser.password),
-        is_active: !!newUser.active,
-        last_login: null,
-      });
-      if (profileErr) {
-        console.error("Error");
-      } else {
-      }
+  const addUser = React.useCallback(async (newUser: Omit<AppUser, "id">) => {
+    if (supabase && !supabaseDisabled) {
       try {
-        const { error: roleErr } = await supabase.from("user_roles").insert({
+        const { data, error } = await supabase.auth.admin?.createUser?.({
+          email: newUser.email,
+          password: newUser.password,
+          email_confirm: true,
+        }) || { data: null, error: null };
+
+        if (error) throw error;
+
+        const authUserId = data?.user?.id || crypto.randomUUID();
+
+        await supabase.from("profiles").insert({
           id: crypto.randomUUID(),
-          user_id: newUser.id,
+          user_id: authUserId,
+          email: newUser.email,
+          display_name: newUser.name,
+          is_active: newUser.active,
+        });
+
+        await supabase.from("user_roles").insert({
+          id: crypto.randomUUID(),
+          user_id: authUserId,
           role: newUser.role,
         });
-        if (roleErr) {
-          console.error("Error");
-        } else {
-        }
-      } catch (e) {
-        console.error("Error");
-      }
 
-      await reloadUsers();
+        await fetchFullUsersList();
+        return;
+      } catch (e) {
+        console.error("Error adding user via Supabase");
+      }
     }
-  }, [users, reloadUsers]);
+
+    if (!AUTH_LOCAL_DISABLED) {
+      const hashed = await hashPassword(newUser.password);
+      const created: AppUser = { ...newUser, id: crypto.randomUUID(), password: hashed };
+      const updated = [...users, created];
+      setUsers(updated);
+      saveUsersLocal(updated);
+    }
+  }, [users, supabaseDisabled, fetchFullUsersList]);
 
   const updateUser = React.useCallback(async (id: string, updates: Partial<AppUser>) => {
-    // 1. Optimistic update
-    const previousUsers = [...users];
-    const previousUser = user ? { ...user } : null;
+    if (supabase && !supabaseDisabled) {
+      try {
+        const profileUpdates: any = {};
+        if (updates.name !== undefined) profileUpdates.display_name = updates.name;
+        if (updates.email !== undefined) profileUpdates.email = updates.email;
+        if (updates.active !== undefined) profileUpdates.is_active = updates.active;
 
-    const updated = users.map(u => (u.id === id ? { ...u, ...updates } : u));
-    setUsers(updated);
+        if (Object.keys(profileUpdates).length > 0) {
+          await supabase.from("profiles").update(profileUpdates).eq("user_id", id);
+        }
 
-    // Crucial: Persistence for Local Auth Password Changes
+        if (updates.role !== undefined) {
+          await supabase.from("user_roles").update({ role: updates.role }).eq("user_id", id);
+        }
+
+        await fetchFullUsersList();
+        return;
+      } catch (e) {
+        console.error("Error updating user");
+      }
+    }
+
     if (!AUTH_LOCAL_DISABLED) {
+      const updated = users.map(u => u.id === id ? { ...u, ...updates } : u);
+      setUsers(updated);
       saveUsersLocal(updated);
-    }
-
-    if (user && user.id === id) {
-      const newUser = { ...user, ...updates };
-      setUser(newUser);
-      saveSession(newUser.id, newUser.role, newUser.name);
-    }
-
-    if (supabase) {
-      let failed = false;
-      const payload: Record<string, unknown> = {};
-
-      if (typeof updates.name === "string") payload.display_name = updates.name;
-      if (typeof updates.email === "string") payload.email = updates.email;
-      // SECURITY: Do NOT store plain-text password in profiles table.
-      // Password changes go through the admin-update-password Edge Function instead.
-      // if (typeof updates.password === "string") payload.password = updates.password;
-      if (typeof updates.active === "boolean") payload.is_active = updates.active;
-      if (typeof updates.lastLoginAt === "number") payload.last_login = new Date(updates.lastLoginAt).toISOString();
-
-      // Note: updates.password is NOT stored in profiles for Supabase (security).
-      // We rely on Supabase Auth for passwords. 
-      // If we are in Supabase mode, the "Password" field in AdminAccounts 
-      // is primarily for Local Fallback or if they add a custom Edge Function later.
-
-      // Update Profiles
-      if (Object.keys(payload).length > 0) {
-        const { error } = await supabase.from("profiles").update(payload).eq("user_id", id);
-
-        if (error) {
-          console.error("Error");
-          const { error: err2 } = await supabase.from("profiles").update(payload).eq("id", id);
-          if (err2) {
-            console.error("Error");
-            failed = true;
-          }
-        }
-      }
-
-      // Update Roles
-      if (typeof updates.role === "string" && !failed) {
-        const roleToSave = updates.role.toLowerCase();
-        try {
-          // Check if it's one of the supported roles
-          const validRoles = ["admin", "manager", "auditor", "user", "moderator"];
-          if (!validRoles.includes(roleToSave)) {
-            console.error("Error");
-            failed = true;
-          } else {
-            const { error: roleErr } = await supabase.from("user_roles").upsert(
-              { user_id: id, role: roleToSave },
-              { onConflict: "user_id" }
-            );
-
-            if (roleErr) {
-              console.warn("[AUTH] role upsert FAILED:", roleErr.message, "- trying delete/insert fallback");
-              await supabase.from("user_roles").delete().eq("user_id", id);
-              const { error: insErr } = await supabase.from("user_roles").insert({
-                user_id: id,
-                role: roleToSave,
-                id: crypto.randomUUID()
-              });
-              if (insErr) {
-                console.error("Error");
-                failed = true;
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Error");
-          failed = true;
-        }
-      }
-
-      if (failed) {
-        console.warn("[AUTH] Reverting optimistic update due to failure.");
-        setUsers(previousUsers);
-        if (!AUTH_LOCAL_DISABLED) saveUsersLocal(previousUsers);
-        if (previousUser && user?.id === id) setUser(previousUser);
-        throw new Error("Update failed on server. Please check your permissions or network.");
-      } else {
-        await reloadUsers();
+      if (user?.id === id) {
+        setUser(prev => prev ? { ...prev, ...updates } : prev);
       }
     }
-  }, [users, user, reloadUsers]);
+  }, [users, user, supabaseDisabled, fetchFullUsersList]);
 
   const removeUser = React.useCallback(async (id: string) => {
-    const updated = users.filter(u => u.id !== id);
-    setUsers(updated);
+    if (supabase && !supabaseDisabled) {
+      try {
+        await supabase.from("user_roles").delete().eq("user_id", id);
+        await supabase.from("profiles").delete().eq("user_id", id);
+        await fetchFullUsersList();
+        return;
+      } catch (e) {
+        console.error("Error removing user");
+      }
+    }
+
     if (!AUTH_LOCAL_DISABLED) {
+      const updated = users.filter(u => u.id !== id);
+      setUsers(updated);
       saveUsersLocal(updated);
     }
-    if (user && user.id === id) {
-      setUser(null);
-      saveSession(null);
-    }
-    if (supabase) {
-      const { error: roleErr } = await supabase.from("user_roles").delete().eq("user_id", id);
-      if (roleErr) console.error("Error");
-      const { error: profErr } = await supabase.from("profiles").delete().eq("user_id", id);
-      if (profErr) {
-        console.error("Error");
-        // Fallback to id column
-        const { error: profErr2 } = await supabase.from("profiles").delete().eq("id", id);
-        if (profErr2) console.error("Error");
-      }
-      await reloadUsers();
-    }
-  }, [users, user, reloadUsers]);
+  }, [users, supabaseDisabled, fetchFullUsersList]);
 
   const resetPassword = React.useCallback(async (email: string): Promise<{ ok: boolean; message: string }> => {
-    if (!supabase) {
-      return { ok: false, message: "خدمة المصادقة غير متوفرة" };
-    }
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`,
-      });
-      if (error) {
+    if (supabase && !supabaseDisabled) {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) return { ok: false, message: error.message };
+        return { ok: true, message: "تم إرسال رابط إعادة تعيين كلمة المرور" };
+      } catch (e) {
         console.error("Error");
-        return { ok: false, message: error.message };
+        return { ok: false, message: "حدث خطأ غير متوقع" };
       }
-      return { ok: true, message: `تم إرسال رابط إعادة تعيين كلمة المرور إلى ${email}` };
-    } catch (e) {
-      console.error("Error");
-      return { ok: false, message: "حدث خطأ غير متوقع" };
     }
-  }, []);
+
+    if (!AUTH_LOCAL_DISABLED) {
+      const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (!found) return { ok: false, message: "البريد الإلكتروني غير مسجل" };
+      return { ok: true, message: "سيتم إعادة تعيين كلمة المرور (محلي)" };
+    }
+    return { ok: false, message: "غير متاح" };
+  }, [users, supabaseDisabled]);
 
   const value: AuthContextValue = {
     user,
     users,
     login,
-
     logout,
     addUser,
     updateUser,
@@ -859,7 +697,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hashedOld = await hashPassword(oldPass);
       if (hashedOld !== u.password) return false;
       const hashedNew = await hashPassword(newPass);
-      updateUser(id, { password: hashedNew });
+      await updateUser(id, { password: hashedNew });
       return true;
     },
     reloadUsers,

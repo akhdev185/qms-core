@@ -1,8 +1,14 @@
 import { supabase } from "../supabase/client";
 
+interface OAuthResult {
+  error?: Error | string;
+  tokens?: { access_token: string; refresh_token: string };
+  [key: string]: any;
+}
+
 export const lovable = {
   auth: {
-    callback: async (result: unknown) => {
+    callback: async (result: OAuthResult) => {
       if (result.error) {
         return { error: result.error };
       }
@@ -19,11 +25,9 @@ export const lovable = {
           return { error: new Error("Supabase client not initialized") };
         }
 
-        console.log("[LOVABLE-AUTH] Supabase client created:", !!supabaseClient);
-        await supabaseClient.auth.setSession(result.tokens);
-        console.log("[LOVABLE-AUTH] Session set successfully on lovable client");
+        await supabaseClient.auth.setSession(result.tokens!);
+        console.log("[LOVABLE-AUTH] Session set successfully");
         
-        // Verify session was stored
         const { data: checkSession } = await supabaseClient.auth.getSession();
         console.log("[LOVABLE-AUTH] Session verification:", { 
           hasSession: !!checkSession?.session,

@@ -1,6 +1,7 @@
 /**
  * Simple form validation utilities
  */
+import { useState, useCallback } from 'react';
 
 type ValidationRule<T> = {
   validate: (value: T) => boolean;
@@ -13,7 +14,7 @@ type ValidationRules<T> = {
 
 type ValidationErrors<T> = Partial<Record<keyof T, string>>;
 
-export function validateForm<T extends Record<string, unknown>>(
+export function validateForm<T extends Record<string, any>>(
   data: T,
   rules: ValidationRules<T>
 ): { isValid: boolean; errors: ValidationErrors<T> } {
@@ -95,15 +96,14 @@ export const validators = {
     message,
   }),
 
-  // For select/radio/checkbox groups
-  oneOf: <T>(options: T[], message?: string): ValidationRule<T> => ({
+  oneOf: <T,>(options: T[], message?: string): ValidationRule<T> => ({
     validate: (value) => options.includes(value),
     message: message || `Must be one of: ${options.join(', ')}`,
   }),
 };
 
 // Type-safe form hook
-export function useFormValidation<T extends Record<string, unknown>>(
+export function useFormValidation<T extends Record<string, any>>(
   initialValues: T,
   validationRules: ValidationRules<T>
 ) {
@@ -118,7 +118,6 @@ export function useFormValidation<T extends Record<string, unknown>>(
 
   const handleChange = useCallback((field: keyof T, value: unknown) => {
     setValues((prev) => ({ ...prev, [field]: value }));
-    // Clear error when field is changed
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
