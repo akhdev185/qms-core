@@ -103,11 +103,11 @@ export default function AuditPage() {
 
       let successCount = 0;
       for (const [rowIndex, { record, fileIds }] of grouped) {
-        const updatedReviews = { ...(record.fileReviews || {}) };
+        const updatedReviews: Record<string, any> = { ...(record.fileReviews || {}) };
         fileIds.forEach(fileId => {
           updatedReviews[fileId] = {
             ...(updatedReviews[fileId] || {}),
-            status: newStatus as any,
+            status: newStatus,
             reviewedBy: reviewerName,
             date: new Date().toISOString(),
           };
